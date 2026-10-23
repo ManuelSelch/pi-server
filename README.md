@@ -19,6 +19,17 @@ The package uses its own lockfile, not the Chat workspace. `verify:package` inst
 
 Pi 1.0.2 uses broad internal ranges. Pinning its working dependency family (agent-core/AI 1.0.2; codemode/MCP/TUI/telemetry/chord 1.0.3) prevents incompatible upgrades in consumers where package overrides would be ignored. Keep these pins until a separately verified Pi update.
 
+## SonarCloud
+
+The Tests workflow scans only after server verification succeeds, reuses its Vitest coverage artifact, and waits up to 300 seconds for the quality gate. Fork pull requests are skipped. Scope is exclusion-based in [sonar-project.properties](sonar-project.properties); production CLI and testing helpers remain included even though compiled package tests do not contribute coverage.
+
+To enable analysis:
+
+1. Import `ManuelSelch/pi-server` into SonarCloud organization `manuelselch` and select CI-based analysis (disable automatic analysis).
+2. Set GitHub Actions repository variables `SONAR_ORGANIZATION=manuelselch` and `SONAR_PROJECT_KEY=ManuelSelch_pi-server` (use the actual project key if different).
+3. Add an authorized analysis token as the repository secret `SONAR_TOKEN`. Never commit it.
+4. Push the workflow and check the scan/quality gate. Variables left unset disable the job; configured variables without a valid token cause analysis to fail. Required merge checks must be configured separately in GitHub branch protection.
+
 ## CLI
 
 ```sh
