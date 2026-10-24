@@ -1,7 +1,20 @@
 {
   "name": "@manuelselch/pi-server",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "license": "MIT",
+  "author": "Manuel Selch",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ManuelSelch/pi-server.git"
+  },
+  "homepage": "https://github.com/ManuelSelch/pi-server#readme",
+  "bugs": {
+    "url": "https://github.com/ManuelSelch/pi-server/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "type": "module",
   "description": "Independent local Pi v2 server",
   "engines": {
@@ -13,7 +26,10 @@
   "files": [
     "dist",
     "README.md",
-    "SOURCE.json"
+    "LICENSE",
+    "docs/CONFIGURATION.md",
+    "docs/EXTENSIONS.md",
+    "docs/PROTOCOL.md"
   ],
   "exports": {
     ".": {

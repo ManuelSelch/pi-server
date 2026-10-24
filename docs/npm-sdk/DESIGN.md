@@ -2,7 +2,7 @@
 
 ## Proposed Design
 - Replace pi-server's local SDK tarball dependency with the exact npm version `@manuelselch/pi-sdk: 0.1.0` and regenerate its lockfile.
-- Remove SDK bundling and the obsolete vendored SDK archive. Remove active SDK archive/hash checks from package verification; retain historical source attribution in `SOURCE.json`.
+- Remove SDK bundling and the obsolete vendored SDK archive. Remove active SDK archive/hash checks from package verification. Historical extraction bookkeeping was subsequently removed for publication.
 - Update `verify-package.mjs` so an isolated packed-server consumer resolves the SDK from npm. Assert that the packed server declares the registry dependency and does not bundle it. Retain existing public-export, CLI, lifecycle and TypeScript consumer checks.
 - Update the server README to describe registry installation. Do not modify Pi Chat's own SDK/server pins, publish pi-server, push commits or restart the live service.
 

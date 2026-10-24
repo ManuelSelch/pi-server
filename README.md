@@ -1,6 +1,19 @@
 # Pi Server
 
-Independent local repository for the compiled Pi v2 host, extracted from Pi Chat. Pi Chat consumer cutover remains S4. Do not edit the separate SDK repositories here. Historical extraction attribution is in [SOURCE.json](SOURCE.json); current SDK version and integrity are recorded in package.json and package-lock.json. No Pi Chat license grant existed at the source revision; resolve licensing before publication.
+A local HTTP/WebSocket host for Pi coding-agent sessions, with a compiled CLI, embedding API, extension integration and Pi v2 protocol support. Extracted from [Pi Chat](https://github.com/ManuelSelch/pi-chat).
+
+## Install
+
+Requires Node >=22.19; Node 24 is used in CI. Standalone restart currently requires POSIX `/bin/sh`.
+
+```sh
+npm install --global @manuelselch/pi-server
+pi-server --host 127.0.0.1 --port 8788 --project /path/to/project
+```
+
+For embedding, install locally with `npm install @manuelselch/pi-server`. Configure Pi providers and credentials through your existing Pi installation; the server does not include provider credentials or a web UI. See [configuration](docs/CONFIGURATION.md).
+
+**Security:** the server can execute tools and access local files with your user permissions. It has no built-in authentication. Keep it on loopback; remote access requires a trusted authenticated TLS proxy that prevents direct backend access.
 
 ## Build and verify
 
@@ -53,6 +66,10 @@ This is a private local backend, not an authenticated public service. Keep loopb
 
 ## Source and test ownership
 
-This repository owns the server implementation, internal regression tests, compiled fixture, diagnostics and independent CI. Pi Chat retains its existing server and staged package until S4 acceptance; reconcile intervening fixes rather than maintaining two permanent implementations. Its launcher still owns build-before-restart. Generic restart accepts an explicit build callback; failure keeps the old process serving.
+This repository owns the server implementation, internal regression tests, compiled fixture, diagnostics and independent CI. Pi Chat consumes the standalone package and retains its frontend, integration tests and build-before-restart launcher policy. Generic restart accepts an explicit build callback; failure keeps the old process serving.
 
-See [ownership and rollback](docs/OWNERSHIP.md), [configuration](docs/CONFIGURATION.md), [extension embedding](docs/EXTENSIONS.md) and the [server protocol reference](docs/PROTOCOL.md). TypeScript SDK schemas remain authoritative; no protocol source is copied here. No remote, publication or live-service replacement is implied by local extraction.
+See [configuration](docs/CONFIGURATION.md), [extension embedding](docs/EXTENSIONS.md) and the [server protocol reference](docs/PROTOCOL.md). TypeScript SDK schemas remain authoritative; no protocol source is copied here. Maintainers: see the [release checklist](https://github.com/ManuelSelch/pi-server/blob/main/docs/RELEASING.md).
+
+## License
+
+[MIT](LICENSE), copyright 2026 Manuel Selch. Dependencies are distributed separately under their own licenses; this license does not relicense third-party packages.

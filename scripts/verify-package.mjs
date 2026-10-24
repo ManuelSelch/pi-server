@@ -9,8 +9,6 @@ import { createRequire } from 'node:module';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const npm = process.env.npm_execpath;
 assert.ok(npm, 'Run through npm run verify:package to select the trusted npm CLI');
-const receipt = JSON.parse(await readFile(join(root, 'SOURCE.json'), 'utf8'));
-assert.match(receipt.sourceRevision, /^[0-9a-f]{40}$/);
 const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
 assert.equal(manifest.dependencies['@manuelselch/pi-sdk'], '0.1.0');
 assert.ok(!(manifest.bundleDependencies ?? []).includes('@manuelselch/pi-sdk'));
