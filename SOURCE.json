@@ -5,7 +5,8 @@
   "packagingRevision": "0388a1f",
   "history": "Clean initial commit; Pi Chat history is not imported.",
   "scope": "S3 standalone server extraction. Pi Chat cutover and source deletion remain S4.",
-  "sdk": {
+  "extractionSdk": {
+    "note": "Historical extraction input only; current SDK dependency is declared in package.json and package-lock.json.",
     "repository": "pi-sdk-typescript",
     "revision": "a3edbcdfbb88b83ef773d9f966ff9ab35115d661",
     "artifact": "manuelselch-pi-sdk-0.0.0.tgz",

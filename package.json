@@ -54,14 +54,11 @@
     "@earendil-works/pi-mcp": "1.0.3",
     "@earendil-works/pi-telemetry": "1.0.3",
     "@earendil-works/pi-tui": "1.0.3",
-    "@manuelselch/pi-sdk": "file:vendor/manuelselch-pi-sdk-0.0.0.tgz",
+    "@manuelselch/pi-sdk": "0.1.0",
     "express": "^5.2.1",
     "ws": "^8.21.3",
     "zod": "^4.6.4"
   },
-  "bundleDependencies": [
-    "@manuelselch/pi-sdk"
-  ],
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^26.5.1",

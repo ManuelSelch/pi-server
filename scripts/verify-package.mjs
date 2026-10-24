@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { cp, mkdtemp, readFile, writeFile, rm, readdir } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile, rm, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,23 +11,30 @@ const npm = process.env.npm_execpath;
 assert.ok(npm, 'Run through npm run verify:package to select the trusted npm CLI');
 const receipt = JSON.parse(await readFile(join(root, 'SOURCE.json'), 'utf8'));
 assert.match(receipt.sourceRevision, /^[0-9a-f]{40}$/);
-assert.equal(createHash('sha256').update(await readFile(join(root, 'vendor', receipt.sdk.artifact))).digest('hex'), receipt.sdk.sha256);
+const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
+assert.equal(manifest.dependencies['@manuelselch/pi-sdk'], '0.1.0');
+assert.ok(!(manifest.bundleDependencies ?? []).includes('@manuelselch/pi-sdk'));
 const directory = await mkdtemp(join(tmpdir(), 'pi server packed '));
 const run = (args, cwd, options = {}) => execFileSync(process.execPath, args, {
   cwd, stdio: 'inherit', timeout: 120000, env: { ...process.env, NODE_PATH: '', PI_CODING_AGENT_DIR: join(directory, 'agent') }, ...options,
 });
 try {
   const result = JSON.parse(run([npm, 'pack', '--ignore-scripts', '--json', '--pack-destination', directory], root, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] }))[0];
-  assert.ok(result.bundled.includes('@manuelselch/pi-sdk'));
+  assert.ok(!result.bundled.includes('@manuelselch/pi-sdk'), 'SDK must resolve from npm, not be bundled');
   for (const file of result.files) {
     assert.ok(!file.path.startsWith('src/'), 'Source leaked into compiled artifact');
     assert.ok(!file.path.includes('vendor/'), 'Local SDK file spec leaked as a runtime dependency');
   }
-  await cp(join(root, 'vendor', receipt.sdk.artifact), join(directory, receipt.sdk.artifact));
   await writeFile(join(directory, 'package.json'), JSON.stringify({ private: true, type: 'module', dependencies: {
-    '@manuelselch/pi-server': './' + result.filename, '@manuelselch/pi-sdk': './' + receipt.sdk.artifact,
+    '@manuelselch/pi-server': './' + result.filename,
   } }));
   run([npm, 'install', '--ignore-scripts', '--no-audit', '--no-fund'], directory);
+  const installedServer = JSON.parse(await readFile(join(directory, 'node_modules/@manuelselch/pi-server/package.json'), 'utf8'));
+  assert.equal(installedServer.dependencies['@manuelselch/pi-sdk'], '0.1.0');
+  const installedSdk = JSON.parse(await readFile(join(directory, 'node_modules/@manuelselch/pi-sdk/package.json'), 'utf8'));
+  assert.equal(installedSdk.version, '0.1.0');
+  const consumerLock = JSON.parse(await readFile(join(directory, 'package-lock.json'), 'utf8'));
+  assert.match(consumerLock.packages['node_modules/@manuelselch/pi-sdk'].resolved, /^https:\/\/registry\.npmjs\.org\//);
   const require = createRequire(join(directory, 'consumer.mjs'));
   for (const name of ['react', 'vite', 'tsx']) assert.throws(() => require.resolve(name), name + ' unexpectedly installed');
   // These are the same behavioral scenarios, now using only documented installed exports/bin.

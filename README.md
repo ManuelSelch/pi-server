@@ -1,6 +1,6 @@
 # Pi Server
 
-Independent local repository for the compiled Pi v2 host, extracted from Pi Chat. Pi Chat consumer cutover remains S4. Do not edit the separate SDK repositories here. Source attribution and pinned SDK artifact checksum are in [SOURCE.json](SOURCE.json). No Pi Chat license grant existed at the source revision; resolve licensing before publication.
+Independent local repository for the compiled Pi v2 host, extracted from Pi Chat. Pi Chat consumer cutover remains S4. Do not edit the separate SDK repositories here. Historical extraction attribution is in [SOURCE.json](SOURCE.json); current SDK version and integrity are recorded in package.json and package-lock.json. No Pi Chat license grant existed at the source revision; resolve licensing before publication.
 
 ## Build and verify
 
@@ -15,7 +15,7 @@ npm run verify:package
 npm pack
 ```
 
-The package uses its own lockfile, not the Chat workspace. `verify:package` installs compiled tarballs in a private temporary consumer, checks SDK initialization/public declarations and runs CLI/restart/fixture scenarios without Chat sources, frontend dependencies or tsx. All test agent/history/metadata storage is private. The SDK tarball is vendored with its original revision/hash; npm bundles the installed SDK and its dependency closure so the server tarball never resolves a developer-local SDK path.
+The package uses its own lockfile, not the Chat workspace. `verify:package` installs compiled tarballs in a private temporary consumer, checks SDK initialization/public declarations and runs CLI/restart/fixture scenarios without Chat sources, frontend dependencies or tsx. All test agent/history/metadata storage is private. The SDK is a normal npm dependency pinned to `@manuelselch/pi-sdk@0.1.0`, not bundled or vendored. The isolated consumer installs it transitively from the registry; the lockfile records its resolved URL and integrity.
 
 Pi 1.0.2 uses broad internal ranges. Pinning its working dependency family (agent-core/AI 1.0.2; codemode/MCP/TUI/telemetry/chord 1.0.3) prevents incompatible upgrades in consumers where package overrides would be ignored. Keep these pins until a separately verified Pi update.
 
