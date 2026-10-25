@@ -2,7 +2,7 @@
 import { parseArgs } from "node:util";
 import { resolve } from "node:path";
 import { homedir } from "node:os";
-import { writeFile } from "node:fs/promises";
+import { publishPidFile } from "./bootstrap/Infra/pid-file.js";
 import { createPiServer, createRestartService, createFileLogger } from "./index.js";
 
 async function main(): Promise<void> {
@@ -51,7 +51,7 @@ async function main(): Promise<void> {
     void (async () => {
       const address = server.httpServer.address();
       if (!address || typeof address === "string") throw new Error("Missing server address");
-      if (pidFile) await writeFile(pidFile, JSON.stringify({ pid: process.pid, port: address.port, cwd: project }));
+      if (pidFile) await publishPidFile(pidFile, { pid: process.pid, port: address.port, cwd: project });
       logger.info("server.started", { host: values.host, port: address.port, projectDirectory: project });
       const host = values.host.includes(":") ? `[${values.host}]` : values.host;
       console.log(`Pi Server: http://${host}:${address.port}`);
