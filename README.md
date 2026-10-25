@@ -66,7 +66,7 @@ This is a private local backend, not an authenticated public service. Keep loopb
 
 ## Source and test ownership
 
-This repository owns the server implementation, internal regression tests, compiled fixture, diagnostics and independent CI. Pi Chat consumes the standalone package and retains its frontend, integration tests and build-before-restart launcher policy. Generic restart accepts an explicit build callback; failure keeps the old process serving.
+This repository owns the server implementation, internal regression tests, compiled fixture, diagnostics and independent CI. Pi Chat consumes the standalone package and retains its frontend, web/Node application tests and build-before-restart launcher policy, not Swift validation. The independent Swift SDK owns its unit tests and real-transport compatibility suite against its own locked published server dependency. See [test ownership and independent verification](docs/TEST-OWNERSHIP.md) for package boundaries, commands and version-specific results. Generic restart accepts an explicit build callback; failure keeps the old process serving.
 
 See [configuration](docs/CONFIGURATION.md), [extension embedding](docs/EXTENSIONS.md) and the [server protocol reference](docs/PROTOCOL.md). TypeScript SDK schemas remain authoritative; no protocol source is copied here. Maintainers: see the [release checklist](https://github.com/ManuelSelch/pi-server/blob/main/docs/RELEASING.md).
 
