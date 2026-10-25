@@ -60,13 +60,34 @@ describe("WidgetRegistry", () => {
     expect(widgets.list()[0]!.placement).toBe("belowEditor");
   });
 
-  it("strips terminal colour, which the browser would otherwise show verbatim", () => {
+  it("preserves SGR styling while removing cursor controls", () => {
     const { widgets } = registry();
+    const styled = "\u001B[32m✓\u001B[0m done";
 
-    widgets.set("todo", ["\u001B[32m✓\u001B[0m done"]);
+    widgets.set("todo", ["\u001B[2J" + styled]);
 
-    expect(widgets.list()[0]!.lines).toEqual(["✓ done"]);
+    expect(widgets.list()[0]!.lines).toEqual([styled]);
+    // Plain-text consumers still use the original stripping behavior.
     expect(stripAnsi("\u001B[1;31mred\u001B[0m")).toBe("red");
+  });
+
+  it("publishes color-only changes but suppresses identical styled content", () => {
+    const { widgets, onChange } = registry();
+    widgets.set("todo", ["\u001B[31msame\u001B[0m"]);
+    widgets.set("todo", ["\u001B[34msame\u001B[0m"]);
+    widgets.set("todo", ["\u001B[34msame\u001B[0m"]);
+
+    expect(onChange).toHaveBeenCalledTimes(2);
+    expect(widgets.list()[0]!.lines).toEqual(["\u001B[34msame\u001B[0m"]);
+  });
+
+  it("trims styled spacers without losing retained line styling", () => {
+    const { widgets } = registry();
+    const line = "\u001B[38;2;12;34;56mcontent";
+    widgets.set("todo", [line, "\u001B[0m", "\u001B[44m  \u001B[49m"]);
+    expect(widgets.list()[0]!.lines).toEqual([line]);
+    widgets.set("todo", ["\u001B[1m \u001B[0m"]);
+    expect(widgets.list()).toEqual([]);
   });
 
   it("drops the trailing spacer rows a terminal widget pads itself with", () => {

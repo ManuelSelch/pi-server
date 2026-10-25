@@ -1,5 +1,5 @@
 import type { Widget, WidgetPlacement } from "@manuelselch/pi-sdk/protocol";
-import { stripAnsi } from "./ansi.js";
+import { preserveSgr, stripAnsi } from "./ansi.js";
 
 /**
  * A widget's trailing blank lines are terminal spacing, which a browser panel
@@ -7,9 +7,9 @@ import { stripAnsi } from "./ansi.js";
  * same as "no widget", which is what the web UI should show for it.
  */
 function normalize(lines: string[]): string[] {
-  const cleaned = lines.map(stripAnsi);
+  const cleaned = lines.map(preserveSgr);
   let end = cleaned.length;
-  while (end > 0 && cleaned[end - 1]!.trim() === "") end--;
+  while (end > 0 && stripAnsi(cleaned[end - 1]!).trim() === "") end--;
   return cleaned.slice(0, end);
 }
 

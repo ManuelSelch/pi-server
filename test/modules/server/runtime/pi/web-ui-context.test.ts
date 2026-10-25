@@ -21,11 +21,46 @@ describe("createWebUiContext", () => {
     ]);
   });
 
+  it("provides deterministic real theme colors and combined decorations for widgets", () => {
+    const { ui } = contextAnswering({ cancelled: true });
+    const other = contextAnswering({ cancelled: true }).ui;
+    const text = ui.theme.bold(ui.theme.italic(ui.theme.underline(ui.theme.strikethrough("styled"))));
+    expect(text).toContain("\u001b[1m");
+    expect(text).toContain("\u001b[3m");
+    expect(text).toContain("\u001b[4m");
+    expect(text).toContain("\u001b[9m");
+    expect(ui.theme.fg("success", "ok")).toMatch(/\u001b\[38;2;\d+;\d+;\d+m/);
+    expect(ui.theme.fg("success", "ok")).toBe(other.theme.fg("success", "ok"));
+    expect(ui.theme.getColorMode()).toBe("truecolor");
+  });
+
+  it("keeps themed notifications plain text", () => {
+    const onNotify = vi.fn();
+    const ui = createWebUiContext({ onNotify, onPrompt: async () => ({ cancelled: true }) });
+    ui.notify(ui.theme.fg("warning", ui.theme.bold("Warning")), "warning");
+    expect(onNotify).toHaveBeenCalledWith("Warning", "warning");
+  });
+
   it("asks the browser and returns the chosen value", async () => {
     const { ui, onPrompt } = contextAnswering({ cancelled: false, value: "second" });
 
     await expect(ui.select("Pick one", ["first", "second"])).resolves.toBe("second");
     expect(onPrompt).toHaveBeenCalledWith({ kind: "select", title: "Pick one", options: ["first", "second"] });
+  });
+
+  it("keeps themed dialog content plain text", async () => {
+    const { ui, onPrompt } = contextAnswering({ cancelled: true });
+    const styled = ui.theme.bold("label");
+    await ui.select(styled, [styled]);
+    await ui.confirm(styled, styled);
+    await ui.input(styled, styled);
+    await ui.editor(styled, styled);
+    expect(onPrompt.mock.calls.map(([request]) => request)).toEqual([
+      { kind: "select", title: "label", options: ["label"] },
+      { kind: "confirm", title: "label", message: "label" },
+      { kind: "input", title: "label", placeholder: "label" },
+      { kind: "editor", title: "label", prefill: "label" },
+    ]);
   });
 
   it("maps confirm and input answers", async () => {

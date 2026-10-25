@@ -105,10 +105,10 @@ describe("ctx.ui.setStatus", () => {
    * `ctx.ui.theme` is the documented way to colour a status, and an absent one
    * threw a TypeError that took the whole command down with it.
    */
-  it("hands out a theme that renders as plain text", () => {
+  it("hands out a headless theme with real styling", () => {
     const ui = createWebUiContext({ onNotify: vi.fn(), onPrompt: vi.fn(async () => ({ cancelled: true as const })) });
 
-    expect(ui.theme.fg("warning", "READONLY")).toBe("READONLY");
-    expect(ui.theme.bold("READONLY")).toBe("READONLY");
+    expect(ui.theme.fg("warning", "READONLY")).toContain("\u001b[38;2;");
+    expect(ui.theme.bold("READONLY")).toContain("\u001b[1m");
   });
 });

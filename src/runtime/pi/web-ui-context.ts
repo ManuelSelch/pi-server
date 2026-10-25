@@ -1,6 +1,8 @@
 import type { ExtensionUIContext } from "@earendil-works/pi-coding-agent";
 import type { UiPromptResult, WidgetPlacement } from "@manuelselch/pi-sdk/protocol";
 import type { UiPromptRequest } from "../../extensions/ui/ui-prompt-registry.js";
+import { stripAnsi } from "../../extensions/ui/ansi.js";
+import { headlessTheme } from "./infra/headless-theme.js";
 
 export type NotificationLevel = "info" | "warning" | "error";
 
@@ -10,31 +12,6 @@ export interface WebUiContextHandlers {
   onWidget?: (key: string, lines: string[] | undefined, placement: WidgetPlacement) => void;
   onStatus?: (key: string, text: string | undefined) => void;
 }
-
-/**
- * `ctx.ui.theme` is how an extension colours the text it hands to `setStatus`
- * and friends. The browser renders that text as text, so every colour here is
- * the identity function: the label survives, the escape sequences never exist.
- *
- * It has to exist at all because the alternative was a crash. Pi's own RPC mode
- * hands out the real terminal theme, so `ctx.ui.theme.fg("warning", "READONLY")`
- * is the documented way to write a status — and against an absent theme it threw
- * a TypeError that took the whole command down with it.
- */
-const plainTheme = {
-  fg: (_color: string, text: string) => text,
-  bg: (_color: string, text: string) => text,
-  bold: (text: string) => text,
-  italic: (text: string) => text,
-  underline: (text: string) => text,
-  inverse: (text: string) => text,
-  strikethrough: (text: string) => text,
-  getFgAnsi: () => "",
-  getBgAnsi: () => "",
-  getColorMode: () => "truecolor" as const,
-  getThinkingBorderColor: () => (text: string) => text,
-  getBashModeBorderColor: () => (text: string) => text,
-};
 
 /**
  * Extensions talk to the host through `ctx.ui`. Pi installs a no-op context
@@ -50,24 +27,24 @@ export function createWebUiContext({ onNotify, onPrompt, onWidget, onStatus }: W
   const noop = (): void => {};
 
   const context = {
-    notify: (message: string, type: NotificationLevel = "info") => onNotify(message, type),
+    notify: (message: string, type: NotificationLevel = "info") => onNotify(stripAnsi(message), type),
 
     // Blocking questions become modals in the browser. Cancelling maps to the
     // same values the terminal returns when a person dismisses a dialog.
     select: async (title: string, options: string[]) => {
-      const result = await onPrompt({ kind: "select", title, options });
+      const result = await onPrompt({ kind: "select", title: stripAnsi(title), options: options.map(stripAnsi) });
       return result.cancelled ? undefined : String(result.value);
     },
     confirm: async (title: string, message: string) => {
-      const result = await onPrompt({ kind: "confirm", title, message });
+      const result = await onPrompt({ kind: "confirm", title: stripAnsi(title), message: stripAnsi(message) });
       return result.cancelled ? false : Boolean(result.value);
     },
     input: async (title: string, placeholder?: string) => {
-      const result = await onPrompt({ kind: "input", title, ...(placeholder ? { placeholder } : {}) });
+      const result = await onPrompt({ kind: "input", title: stripAnsi(title), ...(placeholder ? { placeholder: stripAnsi(placeholder) } : {}) });
       return result.cancelled ? undefined : String(result.value);
     },
     editor: async (title: string, prefill?: string) => {
-      const result = await onPrompt({ kind: "editor", title, ...(prefill ? { prefill } : {}) });
+      const result = await onPrompt({ kind: "editor", title: stripAnsi(title), ...(prefill ? { prefill: stripAnsi(prefill) } : {}) });
       return result.cancelled ? undefined : String(result.value);
     },
     /**
@@ -94,7 +71,7 @@ export function createWebUiContext({ onNotify, onPrompt, onWidget, onStatus }: W
      * Status labels are the terminal's bottom-left footer text, and a browser
      * has a footer too. `undefined` clears, per Pi's contract.
      */
-    setStatus: (key: string, text: string | undefined) => onStatus?.(key, text),
+    setStatus: (key: string, text: string | undefined) => onStatus?.(key, text === undefined ? undefined : stripAnsi(text)),
 
     // Terminal-only chrome.
     onTerminalInput: () => noop,
@@ -111,7 +88,7 @@ export function createWebUiContext({ onNotify, onPrompt, onWidget, onStatus }: W
     addAutocompleteProvider: noop,
     setEditorComponent: noop,
     getEditorComponent: () => undefined,
-    theme: plainTheme,
+    theme: headlessTheme,
   };
 
   // The TUI-shaped members above are intentionally inert, so the object cannot
