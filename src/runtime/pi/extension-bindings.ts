@@ -1,12 +1,13 @@
-import type { AgentSessionRuntime, ExtensionCommandContextActions, ExtensionUIContext } from "@earendil-works/pi-coding-agent";
+import type { AgentSessionRuntime, ExtensionCommandContextActions, ExtensionUIContext, Theme } from "@earendil-works/pi-coding-agent";
 import { createWebUiContext, type WebUiContextHandlers } from "./web-ui-context.js";
 
 /** Binds the browser UI surface to one hosted SDK session. */
 export function bindWebUiContext(
   runtime: AgentSessionRuntime,
   handlers: WebUiContextHandlers,
+  theme?: Theme,
 ): ExtensionUIContext {
-  const context = createWebUiContext(handlers);
+  const context = createWebUiContext(handlers, theme);
   runtime.session.extensionRunner.setUIContext(context, "rpc");
   return context;
 }

@@ -1,5 +1,15 @@
 # Configuration and diagnostics
 
+## Session themes
+
+- Each new/replacement runtime resolves Pi's effective `theme` setting against its discovered resources. Define custom themes through Pi's normal theme/resource configuration and trust rules; the server does not scan additional paths. Use explicit colors and an optional `appearance` for precise headless results.
+- The runtime owns one truecolor Pi `Theme` instance for extension widgets and a concrete serialized palette. Injected `RuntimeAdapter` implementations must provide `sessionTheme(): SessionTheme`; there is no optional/legacy runtime fallback. A fixed `light/dark` pair selects the dark member. Missing, invalid, unavailable, terminal-default or `system` selections use Pi dark and emit `theme.headless_fallback` on server stderr; no terminal queries, watchers or global theme registration are used.
+- Successful `session.open`/`session.create` results include the required palette alongside summary/snapshot, including when reopening an already-running runtime. No theme metadata appears in snapshots, initialization or events. The palette contains bounded names, declared/resolved appearance, fixed RGB semantic roles and page/card/info surfaces; no source paths, raw JSON, ANSI or arbitrary CSS.
+- Pi's optional `export.pageBg/cardBg/infoBg` values are preferred. Omitted surfaces follow Pi's HTML-export policy from `userMessageBg`. Export-only variable resolution and surface derivation are small attributed compatibility adapters; actual theme token resolution, validation and color conversion remain Pi-owned.
+- `/reload` intentionally keeps the cached instance/palette, even if settings or source files change. Closing/recreating a runtime or replacing it resolves anew. Already-emitted widget strings are not recolored. Client restoration after browser refresh/initialization and automatic delivery on replacement/reconnect are not provided here; Chat/Mantine adoption is separate work.
+
+## Host
+
 - CLI defaults: headless `127.0.0.1:8788`, no browser and no initial runtime. `--port 0` requests an ephemeral port. Use `/health` for readiness and `/ws` for SDK v2 initialization.
 - Explicit flags: `--host`, `--port`, `--project`, `--static-directory`, `--pid-file`, `--log-directory`, `--no-restart`. Relative paths resolve from invocation cwd. Do not expose the unauthenticated host publicly; a trusted proxy owns auth/TLS. Native connections without Origin are allowed; browser Origin validation remains enabled.
 - Runtime settings, credentials, registered packages/extensions and sessions stay under `~/.pi/agent` (Pi's `PI_CODING_AGENT_DIR` can isolate test/runtime state). `PI_CHAT_*` launcher settings are not interpreted by this CLI. Inject catalogue storage, logger and runtime via the public embedding API when required.

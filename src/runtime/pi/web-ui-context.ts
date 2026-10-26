@@ -1,8 +1,8 @@
-import type { ExtensionUIContext } from "@earendil-works/pi-coding-agent";
+import type { ExtensionUIContext, Theme } from "@earendil-works/pi-coding-agent";
 import type { UiPromptResult, WidgetPlacement } from "@manuelselch/pi-sdk/protocol";
 import type { UiPromptRequest } from "../../extensions/ui/ui-prompt-registry.js";
 import { stripAnsi } from "../../extensions/ui/ansi.js";
-import { headlessTheme } from "./infra/headless-theme.js";
+import { resolveHeadlessTheme } from "./infra/headless-theme.js";
 
 export type NotificationLevel = "info" | "warning" | "error";
 
@@ -23,7 +23,7 @@ export interface WebUiContextHandlers {
  * genuinely terminal-shaped surface — footers, headers, editor components, and
  * raw terminal input — which has no serialized form to forward.
  */
-export function createWebUiContext({ onNotify, onPrompt, onWidget, onStatus }: WebUiContextHandlers): ExtensionUIContext {
+export function createWebUiContext({ onNotify, onPrompt, onWidget, onStatus }: WebUiContextHandlers, theme: Theme = resolveHeadlessTheme("dark", []).theme): ExtensionUIContext {
   const noop = (): void => {};
 
   const context = {
@@ -88,7 +88,7 @@ export function createWebUiContext({ onNotify, onPrompt, onWidget, onStatus }: W
     addAutocompleteProvider: noop,
     setEditorComponent: noop,
     getEditorComponent: () => undefined,
-    theme: headlessTheme,
+    theme,
   };
 
   // The TUI-shaped members above are intentionally inert, so the object cannot

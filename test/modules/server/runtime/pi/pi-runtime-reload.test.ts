@@ -36,6 +36,9 @@ export default pi => {
     await (adapter as unknown as { startExtensions(): Promise<void> }).startExtensions();
     session.sessionManager.appendMessage({ role: "user", content: "keep this conversation", timestamp: Date.now() });
     const before = adapter.snapshot();
+    const theme = adapter.uiContext().theme;
+    const palette = adapter.sessionTheme();
+    settingsManager.setTheme("light");
     const reload = vi.spyOn(session, "reload");
     const dispose = vi.spyOn(session, "dispose");
     await writeFile(helper, 'export const description = "after";');
@@ -43,6 +46,8 @@ export default pi => {
     await adapter.reload();
 
     expect(reload).toHaveBeenCalledOnce();
+    expect(adapter.uiContext().theme).toBe(theme);
+    expect(adapter.sessionTheme()).toBe(palette);
     expect(dispose).not.toHaveBeenCalled();
     expect(adapter.snapshot().sessionId).toBe(before.sessionId);
     expect(adapter.snapshot().messages).toEqual(before.messages);

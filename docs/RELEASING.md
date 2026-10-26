@@ -26,6 +26,10 @@ Confirm that:
 - The installed-tarball verification passes, not just source tests; CI is green on the release commit.
 - You control the npm scope and the Pi Server copyright being licensed. Preserve third-party licenses. The MIT grant applies to this repository's code, not a blanket relicensing of Pi Chat or dependencies.
 
+## Unpublished theme integration
+
+The current S3 checkout temporarily bundles an unpublished, hash-pinned S2 SDK artifact. Do not publish this checkout as-is. Before release, publish/consume separately approved SDK and server versions, return the SDK dependency to its verified registry version, remove temporary bundling/vendor artifacts, and restore registry-resolution assertions in package verification. The source SDK/server version numbers have not been bumped.
+
 ## Publish (explicit maintainer action)
 
 Authenticate with an npm account authorized for `@manuelselch`, with npm's required publishing authentication/2FA. Check package availability before publishing; an existing version cannot be overwritten.

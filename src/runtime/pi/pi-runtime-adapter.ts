@@ -3,6 +3,7 @@ import {
   type AgentSessionRuntime,
   type ExtensionUIContext,
 } from "@earendil-works/pi-coding-agent";
+import { resolveHeadlessTheme, type HeadlessTheme } from "./infra/headless-theme.js";
 import { parseBashInput } from "./bash-input.js";
 import { commandCompletionItemSchema, type CommandCompletionItem, type ChatMessage, type SlashCommand, type ThinkingLevel, type UiPromptResult } from "@manuelselch/pi-sdk/protocol";
 
@@ -37,6 +38,7 @@ export class PiRuntimeAdapter implements RuntimeAdapter {
     lastError: undefined as string | undefined,
   };
   private boundSessionId = "";
+  private resolvedTheme: HeadlessTheme;
   /** toolCallIds between tool_execution_start and end; only those may stay "running" in a snapshot. */
   private readonly inFlightTools = new Set<string>();
   /**
@@ -58,6 +60,7 @@ export class PiRuntimeAdapter implements RuntimeAdapter {
     private readonly runtime: AgentSessionRuntime,
     private models: string[] = [],
   ) {
+    this.resolvedTheme = this.resolveTheme();
     const runtimeHooks = this.runtime as AgentSessionRuntime & {
       setBeforeSessionInvalidate?: (handler: () => void) => void;
       setRebindSession?: (handler: () => Promise<void>) => void;
@@ -69,6 +72,7 @@ export class PiRuntimeAdapter implements RuntimeAdapter {
     });
     runtimeHooks.setRebindSession?.(async () => {
       const previousSessionId = this.boundSessionId;
+      this.resolvedTheme = this.resolveTheme();
       this.bindSession();
       this.bindUi();
       this.bindCommandContext();
@@ -107,7 +111,7 @@ export class PiRuntimeAdapter implements RuntimeAdapter {
       onPrompt: (request) => this.prompts.ask(request),
       onWidget: (key, lines, placement) => this.widgets.set(key, lines, placement),
       onStatus: (key, text) => this.statuses.set(key, text),
-    });
+    }, this.resolvedTheme.theme);
   }
 
   /**
@@ -127,6 +131,13 @@ export class PiRuntimeAdapter implements RuntimeAdapter {
    */
   uiContext(): ExtensionUIContext {
     return this.ui;
+  }
+
+  sessionTheme() { return this.resolvedTheme.palette; }
+
+  private resolveTheme(): HeadlessTheme {
+    const session = this.runtime.session;
+    return resolveHeadlessTheme(session.settingsManager.getThemeSetting(), session.resourceLoader.getThemes().themes);
   }
 
   /**

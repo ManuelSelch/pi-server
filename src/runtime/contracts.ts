@@ -1,5 +1,5 @@
 import type { ExtensionUIContext } from "@earendil-works/pi-coding-agent";
-import type { ActionRegistry, CommandCompletionItem, ChatMessage, FooterItem, PiChatExtensions, ThinkingLevel, ToolCard, UiPrompt, UiPromptResult, Widget } from "@manuelselch/pi-sdk/protocol";
+import type { SessionTheme, ActionRegistry, CommandCompletionItem, ChatMessage, FooterItem, PiChatExtensions, ThinkingLevel, ToolCard, UiPrompt, UiPromptResult, Widget } from "@manuelselch/pi-sdk/protocol";
 
 export type RuntimeEvent =
   | { type: "assistantDelta"; runId: string; delta: string }
@@ -45,6 +45,8 @@ export interface RuntimeSnapshot {
 
 export interface RuntimeAdapter {
   snapshot(): RuntimeSnapshot;
+  /** Cached concrete palette, delivered only in open/create results. */
+  sessionTheme(): SessionTheme;
   /**
    * This session's dialog surface, so an extension action can ask a question in
    * the session whose button was pressed. Each adapter has its own: a context

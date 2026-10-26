@@ -13,8 +13,8 @@ function fakeAdapter(promptTemplates: unknown[], registeredCommands: unknown[] =
     getAvailableThinkingLevels: () => ["off"],
     supportsThinking: () => false,
     promptTemplates,
-    resourceLoader: { getSkills: () => ({ skills }) },
-    settingsManager: { getEnableSkillCommands: () => enableSkillCommands },
+    resourceLoader: { getThemes: () => ({ themes: [] }), getSkills: () => ({ skills }) },
+    settingsManager: { getThemeSetting: () => "dark", getEnableSkillCommands: () => enableSkillCommands },
     extensionRunner: {
       setUIContext: () => {},
       getCommand: (name: string) => registeredCommands.find((command) => (command as { invocationName: string }).invocationName === name),

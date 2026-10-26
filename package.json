@@ -27,6 +27,7 @@
     "dist",
     "README.md",
     "LICENSE",
+    "THIRD-PARTY-NOTICES.md",
     "docs/CONFIGURATION.md",
     "docs/EXTENSIONS.md",
     "docs/PROTOCOL.md"
@@ -70,11 +71,12 @@
     "@earendil-works/pi-mcp": "1.0.3",
     "@earendil-works/pi-telemetry": "1.0.3",
     "@earendil-works/pi-tui": "1.0.3",
-    "@manuelselch/pi-sdk": "0.1.0",
+    "@manuelselch/pi-sdk": "file:vendor/pi-sdk-0.1.0-theme-661fecd.tgz",
     "express": "^5.2.1",
     "ws": "^8.21.3",
     "zod": "^4.6.4"
   },
+  "bundleDependencies": ["@manuelselch/pi-sdk"],
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^26.5.1",

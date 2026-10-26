@@ -59,6 +59,8 @@ export class ChatApplicationService {
     return this.sessions.list().map((session) => session.sessionId);
   }
 
+  sessionTheme(sessionId: string) { return this.sessions.get(sessionId).sessionTheme(); }
+
   /** Synchronous capture used only after asynchronous snapshot preparation. */
   captureSnapshot(sessionId: string) {
     const snapshot = this.sessions.get(sessionId).snapshot();

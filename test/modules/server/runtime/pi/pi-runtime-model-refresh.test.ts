@@ -16,7 +16,8 @@ function fixture() {
       getAvailable: async () => catalogue,
       getAvailableSnapshot: () => catalogue,
     },
-    settingsManager: { getEnableSkillCommands: () => false, reload: vi.fn(async () => { patterns = savedPatterns; }), getEnabledModels: () => patterns },
+    resourceLoader: { getThemes: () => ({ themes: [] }) },
+    settingsManager: { getThemeSetting: () => "dark", getEnableSkillCommands: () => false, reload: vi.fn(async () => { patterns = savedPatterns; }), getEnabledModels: () => patterns },
     extensionRunner: {
       setUIContext: () => {}, getCommand: () => undefined,
       getRegisteredCommands: () => [], emit: vi.fn(async () => {}),
@@ -54,6 +55,22 @@ describe("model picker refresh", () => {
       });
     });
     await Promise.all([adapter.prompt("/model"), shown]);
+  });
+
+  it("resolves a new theme before extension startup when the runtime is replaced", async () => {
+    const { adapter, session, runtime, rebind } = fixture();
+    const previousTheme = adapter.uiContext().theme;
+    const previousPalette = adapter.sessionTheme();
+    runtime.session = { ...session, sessionId: "s2", settingsManager: { ...session.settingsManager, getThemeSetting: () => "light" } };
+    session.extensionRunner.emit.mockImplementation(async () => {
+      expect(adapter.sessionTheme().appearance).toBe("light");
+      expect(adapter.uiContext().theme.appearance).toBe("light");
+    });
+    await rebind();
+    expect(adapter.uiContext().theme).not.toBe(previousTheme);
+    expect(adapter.sessionTheme()).not.toBe(previousPalette);
+    expect(previousPalette.name).toBe("dark");
+    expect(previousTheme.appearance).toBe("dark");
   });
 
   it("refreshes after rebinding and session_start changes settings", async () => {

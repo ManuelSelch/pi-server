@@ -30,8 +30,8 @@ function fakeRuntime() {
     getAvailableThinkingLevels: () => ["off"],
     supportsThinking: () => false,
     promptTemplates: [] as unknown[],
-    resourceLoader: { getSkills: () => ({ skills: [] }) },
-    settingsManager: { getEnableSkillCommands: () => true },
+    resourceLoader: { getThemes: () => ({ themes: [] }), getSkills: () => ({ skills: [] }) },
+    settingsManager: { getThemeSetting: () => "dark", getEnableSkillCommands: () => true },
     extensionRunner: {
       setUIContext: () => {},
       getCommand: () => undefined,

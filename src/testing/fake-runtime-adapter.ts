@@ -1,4 +1,5 @@
 import type { ExtensionUIContext } from "@earendil-works/pi-coding-agent";
+import { resolveHeadlessTheme } from "../runtime/pi/infra/headless-theme.js";
 import { parseBashInput } from "../runtime/pi/bash-input.js";
 import type { ChatMessage, CommandCompletionItem, ThinkingLevel, UiPromptResult } from "@manuelselch/pi-sdk/protocol";
 import type { RuntimeAdapter, RuntimeEvent, RuntimeSnapshot } from "../runtime/contracts.js";
@@ -11,6 +12,8 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
   private streaming = false;
   private run = 0;
   private ui?: ExtensionUIContext;
+  private readonly resolvedTheme = resolveHeadlessTheme("dark", []);
+  sessionTheme() { return this.resolvedTheme.palette; }
   /**
    * A real dialog stack, so a question an extension asks reaches a browser and
    * is answered by it. Auto-cancelling here instead would make every test of a
@@ -75,7 +78,7 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
     this.ui ??= createWebUiContext({
       onNotify: (message, level) => this.emit({ type: "notification", level, message }),
       onPrompt: (request) => this.promptRegistry.ask(request),
-    });
+    }, this.resolvedTheme.theme);
     return this.ui;
   }
 

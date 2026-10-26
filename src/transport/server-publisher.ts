@@ -87,7 +87,7 @@ export class ServerPublisher {
       snapshot = this.snapshot(raw, this.chat.captureSnapshot(raw));
       this.logger?.warn("snapshot.open_refresh_failed", { message: "Using current runtime state after extension snapshot refresh failed." });
     }
-    return { snapshot, summary: this.inventory().sessions.find(session => session.sessionId === snapshot.sessionId)! };
+    return { snapshot, summary: this.inventory().sessions.find(session => session.sessionId === snapshot.sessionId)!, theme: this.chat.sessionTheme(raw) };
   }
   async prepareInitial(connectionId: string, capabilities: Result<"server.initialize">["capabilities"]): Promise<() => Result<"server.initialize">> {
     // Catalogue discovery is independent of the atomic runtime snapshot barrier.

@@ -28,7 +28,7 @@ npm run verify:package
 npm pack
 ```
 
-The package uses its own lockfile, not the Chat workspace. `verify:package` installs compiled tarballs in a private temporary consumer, checks SDK initialization/public declarations and runs CLI/restart/fixture scenarios without Chat sources, frontend dependencies or tsx. All test agent/history/metadata storage is private. The SDK is a normal npm dependency pinned to `@manuelselch/pi-sdk@0.1.0`, not bundled or vendored. The isolated consumer installs it transitively from the registry; the lockfile records its resolved URL and integrity.
+The package uses its own lockfile, not the Chat workspace. `verify:package` installs compiled tarballs in a private temporary consumer, checks SDK initialization/public declarations and runs CLI/restart/fixture scenarios without Chat sources, frontend dependencies or tsx. All test agent/history/metadata storage is private. For the unpublished Pi-theme integration, the SDK is temporarily pinned to the verified S2 archive in `vendor/pi-sdk-0.1.0-theme-661fecd.tgz` and bundled into packed server artifacts. Its provenance/hash is recorded in `vendor/pi-theme-sdk.json`; `verify:package` checks it and runs against the installed bundled SDK without a sibling checkout. This is not a release/publication: return to verified registry versions only after separately authorized publication. Chat's installed dependencies are unchanged.
 
 Pi 1.0.2 uses broad internal ranges. Pinning its working dependency family (agent-core/AI 1.0.2; codemode/MCP/TUI/telemetry/chord 1.0.3) prevents incompatible upgrades in consumers where package overrides would be ignored. Keep these pins until a separately verified Pi update.
 

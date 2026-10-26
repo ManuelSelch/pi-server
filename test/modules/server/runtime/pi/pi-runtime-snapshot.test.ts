@@ -11,7 +11,8 @@ function runtime() {
     isStreaming: false, isIdle: true, isCompacting: false,
     model: undefined, thinkingLevel: "off", supportsThinking: () => false,
     getAvailableThinkingLevels: () => ["off"], promptTemplates: [],
-    settingsManager: { getEnableSkillCommands: () => false },
+    resourceLoader: { getThemes: () => ({ themes: [] }) },
+    settingsManager: { getThemeSetting: () => "dark", getEnableSkillCommands: () => false },
     extensionRunner: { setUIContext: () => {}, getCommand: () => undefined, getRegisteredCommands: () => [] },
     subscribe: (handler: typeof dispatch) => { dispatch = handler; return () => {}; },
   };

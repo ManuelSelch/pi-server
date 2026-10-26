@@ -46,6 +46,8 @@ Request methods use namespaced `resource.action` values directly in the request/
 
 ### 4.1 Session lifecycle and navigation
 
+Successful `session.open` and `session.create` results are `{ summary, snapshot, theme }`. `theme` is required and validated by the SDK: bounded name, `light`/`dark` appearance, six-digit RGB semantic colors and page/card/info surfaces. Missing/null themes are protocol errors; no older-server compatibility is supported. This palette is cached per runtime and returned even when open reuses an existing runtime. No theme fields are added to summaries, snapshots, initialization or events; reload retains the palette and reconnect does not automatically deliver it.
+
 Session operations require the target runtime's `sessionId`. Server operations do not depend on a focused session.
 
 | Method | Scope / input | Response meaning |

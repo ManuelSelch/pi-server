@@ -15,7 +15,9 @@ function fakeRuntime() {
     sessionId: "s1",
     messages: [] as unknown[],
     isIdle: true,
+    resourceLoader: { getThemes: () => ({ themes: [] }) },
     settingsManager: {
+      getThemeSetting: () => "dark",
       reload: async () => { calls.push("refreshSettings"); },
       getEnabledModels: () => undefined,
     },

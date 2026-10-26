@@ -31,6 +31,7 @@ describe("createWebUiContext", () => {
     expect(text).toContain("\u001b[9m");
     expect(ui.theme.fg("success", "ok")).toMatch(/\u001b\[38;2;\d+;\d+;\d+m/);
     expect(ui.theme.fg("success", "ok")).toBe(other.theme.fg("success", "ok"));
+    expect(ui.theme).not.toBe(other.theme);
     expect(ui.theme.getColorMode()).toBe("truecolor");
   });
 
