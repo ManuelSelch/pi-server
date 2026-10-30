@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { mkdtemp, readFile, writeFile, rm, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -11,22 +10,24 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const npm = process.env.npm_execpath;
 assert.ok(npm, 'Run through npm run verify:package to select the trusted npm CLI');
 const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
-const receipt = JSON.parse(await readFile(join(root, 'vendor/prompt-sdk.json'), 'utf8'));
 const lock = JSON.parse(await readFile(join(root, 'package-lock.json'), 'utf8'));
-assert.equal(manifest.dependencies['@manuelselch/pi-sdk'], receipt.version);
-assert.equal(lock.packages['node_modules/@manuelselch/pi-sdk'].resolved, 'file:vendor/' + receipt.file);
-assert.equal(createHash('sha256').update(await readFile(join(root, 'vendor', receipt.file))).digest('hex'), receipt.sha256);
-assert.ok(manifest.bundleDependencies.includes('@manuelselch/pi-sdk'));
+const sdk = lock.packages['node_modules/@manuelselch/pi-sdk'];
+assert.equal(lock.packages[''].dependencies['@manuelselch/pi-sdk'], manifest.dependencies['@manuelselch/pi-sdk']);
+assert.match(sdk.resolved, /^https:\/\/registry\.npmjs\.org\/@manuelselch\/pi-sdk\/-\/pi-sdk-[^/]+\.tgz$/);
+assert.match(sdk.integrity, /^sha512-[A-Za-z0-9+/]+={0,2}$/);
+assert.ok(!(manifest.bundleDependencies ?? []).includes('@manuelselch/pi-sdk'));
+assert.ok(!(manifest.bundledDependencies ?? []).includes('@manuelselch/pi-sdk'));
 const directory = await mkdtemp(join(tmpdir(), 'pi server packed '));
 const run = (args, cwd, options = {}) => execFileSync(process.execPath, args, {
   cwd, stdio: 'inherit', timeout: 120000, env: { ...process.env, NODE_PATH: '', PI_CODING_AGENT_DIR: join(directory, 'agent') }, ...options,
 });
 try {
   const result = JSON.parse(run([npm, 'pack', '--ignore-scripts', '--json', '--pack-destination', directory], root, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] }))[0];
-  assert.ok(result.bundled.includes('@manuelselch/pi-sdk'), 'Coordinated SDK snapshot must be bundled for isolated installs');
+  assert.ok(!result.bundled.includes('@manuelselch/pi-sdk'), 'SDK must install from npm, not be bundled');
   for (const file of result.files) {
     assert.ok(!file.path.startsWith('src/'), 'Source leaked into compiled artifact');
     assert.ok(!file.path.includes('vendor/'), 'Vendor archive leaked into compiled artifact');
+    assert.ok(!file.path.includes('node_modules/@manuelselch/pi-sdk/'), 'Bundled SDK files leaked into compiled artifact');
   }
   await writeFile(join(directory, 'package.json'), JSON.stringify({ private: true, type: 'module', dependencies: {
     '@manuelselch/pi-server': './' + result.filename,
@@ -35,7 +36,16 @@ try {
   const installedServer = JSON.parse(await readFile(join(directory, 'node_modules/@manuelselch/pi-server/package.json'), 'utf8'));
   assert.equal(installedServer.dependencies['@manuelselch/pi-sdk'], manifest.dependencies['@manuelselch/pi-sdk']);
   const require = createRequire(join(directory, 'consumer.mjs'));
-  const sdkRoot = join(directory, 'node_modules/@manuelselch/pi-server/node_modules/@manuelselch/pi-sdk');
+  const sdkRoot = join(directory, 'node_modules/@manuelselch/pi-sdk');
+  // Resolve ESM import conditions: the SDK deliberately has no CommonJS entry.
+  run(['--experimental-import-meta-resolve', '--input-type=module', '--eval', `
+    import assert from 'node:assert/strict';
+    const server = import.meta.resolve('@manuelselch/pi-server');
+    assert.equal(import.meta.resolve('@manuelselch/pi-sdk', server), import.meta.resolve('@manuelselch/pi-sdk'));
+  `], directory);
+  const consumerLock = JSON.parse(await readFile(join(directory, 'package-lock.json'), 'utf8'));
+  assert.equal(consumerLock.packages['node_modules/@manuelselch/pi-sdk'].resolved, sdk.resolved);
+  assert.equal(consumerLock.packages['node_modules/@manuelselch/pi-sdk'].integrity, sdk.integrity);
   const installedSdk = JSON.parse(await readFile(join(sdkRoot, 'package.json'), 'utf8'));
   const sourceSdk = join(root, 'node_modules/@manuelselch/pi-sdk');
   const sourceManifest = JSON.parse(await readFile(join(sourceSdk, 'package.json'), 'utf8'));
@@ -45,7 +55,7 @@ try {
     assert.deepEqual(await readFile(join(sdkRoot, file)), await readFile(join(sourceSdk, file)), file);
   }
   run([npm, 'ls', '@manuelselch/pi-sdk', '--all'], directory);
-  // Test helpers use the same bundled SDK without requiring a registry copy.
+  // Test helpers use the same registry-installed SDK as the server.
   const sdkEntry = JSON.stringify(pathToFileURL(join(sdkRoot, 'dist/index.js')).href);
   for (const name of ['react', 'vite', 'tsx']) assert.throws(() => require.resolve(name), name + ' unexpectedly installed');
   // These are the same behavioral scenarios, now using only documented installed exports/bin.
@@ -71,5 +81,5 @@ void createPiRuntimeAdapter; void createRestartService; void snapshotData; void 
 `);
   run([join(root, 'node_modules/typescript/bin/tsc'), '--noEmit', '--strict', '--skipLibCheck', '--module', 'NodeNext', '--moduleResolution', 'NodeNext', '--target', 'ES2023', 'consumer.ts'], directory);
   assert.throws(() => require.resolve('@manuelselch/pi-server/dist/transport/websocket-transport.js'), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });
-  console.log('Verified compiled packed server exports, bundled SDK snapshot, SDK initialization, CLI/restart/signals and loopback safety in an isolated consumer.');
+  console.log('Verified compiled packed server exports, registry SDK dependency, SDK initialization, CLI/restart/signals and loopback safety in an isolated consumer.');
 } finally { await rm(directory, { recursive: true, force: true }); }
