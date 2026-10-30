@@ -46,7 +46,7 @@ export async function handleNativeCommand(message: string, dependencies: NativeC
   }
   if (name === "model") {
     await dependencies.refreshModels();
-    const result = await dependencies.ask({ kind: "select", title: "Select a model", options: dependencies.models() });
+    const result = await dependencies.ask({ kind: "select", submission: "immediate", title: "Select a model", options: dependencies.models() });
     if (!result.cancelled) await dependencies.setModel(String(result.value));
     return true;
   }
@@ -59,7 +59,7 @@ export async function handleNativeCommand(message: string, dependencies: NativeC
     return true;
   }
   if (name === "thinking") {
-    const result = await dependencies.ask({ kind: "select", title: "Select a thinking level", options: dependencies.thinkingLevels });
+    const result = await dependencies.ask({ kind: "select", submission: "immediate", title: "Select a thinking level", options: dependencies.thinkingLevels });
     if (!result.cancelled) dependencies.setThinkingLevel(String(result.value) as ThinkingLevel);
     return true;
   }

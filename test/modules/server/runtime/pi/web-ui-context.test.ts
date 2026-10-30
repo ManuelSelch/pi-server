@@ -46,7 +46,7 @@ describe("createWebUiContext", () => {
     const { ui, onPrompt } = contextAnswering({ cancelled: false, value: "second" });
 
     await expect(ui.select("Pick one", ["first", "second"])).resolves.toBe("second");
-    expect(onPrompt).toHaveBeenCalledWith({ kind: "select", title: "Pick one", options: ["first", "second"] });
+    expect(onPrompt).toHaveBeenCalledWith({ kind: "select", title: "Pick one", options: ["first", "second"], submission: "immediate" });
   });
 
   it("keeps themed dialog content plain text", async () => {
@@ -57,7 +57,7 @@ describe("createWebUiContext", () => {
     await ui.input(styled, styled);
     await ui.editor(styled, styled);
     expect(onPrompt.mock.calls.map(([request]) => request)).toEqual([
-      { kind: "select", title: "label", options: ["label"] },
+      { kind: "select", title: "label", options: ["label"], submission: "immediate" },
       { kind: "confirm", title: "label", message: "label" },
       { kind: "input", title: "label", placeholder: "label" },
       { kind: "editor", title: "label", prefill: "label" },

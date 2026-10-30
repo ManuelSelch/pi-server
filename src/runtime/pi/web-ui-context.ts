@@ -1,3 +1,6 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+import type { PromptPresentation, PromptUI } from "@manuelselch/pi-sdk/extension-ui";
+import { promptPresentationSchema } from "@manuelselch/pi-sdk/protocol/prompt-presentation.js";
 import type { ExtensionUIContext, Theme } from "@earendil-works/pi-coding-agent";
 import type { UiPromptResult, WidgetPlacement } from "@manuelselch/pi-sdk/protocol";
 import type { UiPromptRequest } from "../../extensions/ui/ui-prompt-registry.js";
@@ -23,28 +26,41 @@ export interface WebUiContextHandlers {
  * genuinely terminal-shaped surface — footers, headers, editor components, and
  * raw terminal input — which has no serialized form to forward.
  */
-export function createWebUiContext({ onNotify, onPrompt, onWidget, onStatus }: WebUiContextHandlers, theme: Theme = resolveHeadlessTheme("dark", []).theme): ExtensionUIContext {
+export type WebPromptUIContext = ExtensionUIContext & Required<Pick<PromptUI, "withPromptPresentation">>;
+
+export function createWebUiContext({ onNotify, onPrompt, onWidget, onStatus }: WebUiContextHandlers, theme: Theme = resolveHeadlessTheme("dark", []).theme): WebPromptUIContext {
   const noop = (): void => {};
+  const presentation = new AsyncLocalStorage<PromptPresentation>();
+  const ask = (request: UiPromptRequest): Promise<UiPromptResult> => {
+    const current = presentation.getStore();
+    if (request.kind !== "select" && current?.submission !== undefined) {
+      throw new Error("Only select prompts accept submission mode");
+    }
+    const fields = current ? { ...current, ...(current.body ? { body: { ...current.body, text: stripAnsi(current.body.text) } } : {}) } : {};
+    return onPrompt({ ...request, ...fields });
+  };
 
   const context = {
+    withPromptPresentation: <T>(settings: PromptPresentation, run: () => Promise<T>): Promise<T> =>
+      presentation.run(promptPresentationSchema.parse(settings), run),
     notify: (message: string, type: NotificationLevel = "info") => onNotify(stripAnsi(message), type),
 
     // Blocking questions become modals in the browser. Cancelling maps to the
     // same values the terminal returns when a person dismisses a dialog.
     select: async (title: string, options: string[]) => {
-      const result = await onPrompt({ kind: "select", title: stripAnsi(title), options: options.map(stripAnsi) });
+      const result = await ask({ kind: "select", title: stripAnsi(title), options: options.map(stripAnsi), submission: "immediate" });
       return result.cancelled ? undefined : String(result.value);
     },
     confirm: async (title: string, message: string) => {
-      const result = await onPrompt({ kind: "confirm", title: stripAnsi(title), message: stripAnsi(message) });
+      const result = await ask({ kind: "confirm", title: stripAnsi(title), message: stripAnsi(message) });
       return result.cancelled ? false : Boolean(result.value);
     },
     input: async (title: string, placeholder?: string) => {
-      const result = await onPrompt({ kind: "input", title: stripAnsi(title), ...(placeholder ? { placeholder: stripAnsi(placeholder) } : {}) });
+      const result = await ask({ kind: "input", title: stripAnsi(title), ...(placeholder ? { placeholder: stripAnsi(placeholder) } : {}) });
       return result.cancelled ? undefined : String(result.value);
     },
     editor: async (title: string, prefill?: string) => {
-      const result = await onPrompt({ kind: "editor", title: stripAnsi(title), ...(prefill ? { prefill: stripAnsi(prefill) } : {}) });
+      const result = await ask({ kind: "editor", title: stripAnsi(title), ...(prefill ? { prefill: stripAnsi(prefill) } : {}) });
       return result.cancelled ? undefined : String(result.value);
     },
     /**
@@ -93,5 +109,5 @@ export function createWebUiContext({ onNotify, onPrompt, onWidget, onStatus }: W
 
   // The TUI-shaped members above are intentionally inert, so the object cannot
   // satisfy the full terminal contract structurally.
-  return context as unknown as ExtensionUIContext;
+  return context as unknown as WebPromptUIContext;
 }

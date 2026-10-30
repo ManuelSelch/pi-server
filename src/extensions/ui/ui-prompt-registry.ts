@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { UiPrompt, UiPromptResult } from "@manuelselch/pi-sdk/protocol";
+import { uiPromptSchema, type UiPrompt, type UiPromptResult } from "@manuelselch/pi-sdk/protocol";
 
 /** A forgotten dialog must not block an extension (or a tool call) forever. */
 export const PROMPT_TIMEOUT_MS = 5 * 60_000;
@@ -40,7 +40,7 @@ export class UiPromptRegistry {
   ) {}
 
   ask(request: UiPromptRequest): Promise<UiPromptResult> {
-    const prompt: UiPrompt = { id: randomUUID(), ...request };
+    const prompt = uiPromptSchema.parse({ id: randomUUID(), ...request });
     return new Promise<UiPromptResult>((resolve) => {
       this.pending.set(prompt.id, {
         prompt,
