@@ -66,9 +66,13 @@ export async function executeOperation(command: Exclude<Request, Request<"server
         await chat.runFeature({ type: "runFeature", featureId: "thinking.level", sessionId: raw!, input: command.params });
         publisher.settingsChanged(raw!); return completed(publisher.settings(chat.captureSnapshot(raw!)), () => publisher.sendSnapshot(raw!));
       case "message.send": return accepted(() => finishWork(() => chat.prompt(raw!, command.params.message)));
-      case "run.abort":
-        if (!chat.captureSnapshot(raw!).isStreaming) return completed();
+      case "run.abort": {
+        const snapshot = chat.captureSnapshot(raw!);
+        // Native command dialogs can wait outside the agent loop. Stop must
+        // still reach the adapter, which cancels the pending registry requests.
+        if (!snapshot.isStreaming && snapshot.prompts.length === 0) return completed();
         return accepted(() => finishWork(() => chat.abort(raw!)));
+      }
       case "session.compact":
         if (chat.captureSnapshot(raw!).isStreaming) throw new V2OperationError("sessionBusy", "Stop the current run before compacting.");
         return accepted(() => finishWork(() => chat.runFeature({ type: "runFeature", sessionId: raw!, featureId: "session.compact", input: {} })));
