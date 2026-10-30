@@ -11,8 +11,10 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const npm = process.env.npm_execpath;
 assert.ok(npm, 'Run through npm run verify:package to select the trusted npm CLI');
 const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
-const receipt = JSON.parse(await readFile(join(root, 'vendor/pi-theme-sdk.json'), 'utf8'));
-assert.equal(manifest.dependencies['@manuelselch/pi-sdk'], 'file:vendor/' + receipt.file);
+const receipt = JSON.parse(await readFile(join(root, 'vendor/prompt-sdk.json'), 'utf8'));
+const lock = JSON.parse(await readFile(join(root, 'package-lock.json'), 'utf8'));
+assert.equal(manifest.dependencies['@manuelselch/pi-sdk'], receipt.version);
+assert.equal(lock.packages['node_modules/@manuelselch/pi-sdk'].resolved, 'file:vendor/' + receipt.file);
 assert.equal(createHash('sha256').update(await readFile(join(root, 'vendor', receipt.file))).digest('hex'), receipt.sha256);
 assert.ok(manifest.bundleDependencies.includes('@manuelselch/pi-sdk'));
 const directory = await mkdtemp(join(tmpdir(), 'pi server packed '));
@@ -21,7 +23,7 @@ const run = (args, cwd, options = {}) => execFileSync(process.execPath, args, {
 });
 try {
   const result = JSON.parse(run([npm, 'pack', '--ignore-scripts', '--json', '--pack-destination', directory], root, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] }))[0];
-  assert.ok(result.bundled.includes('@manuelselch/pi-sdk'), 'Unpublished theme SDK must be bundled for isolated installs');
+  assert.ok(result.bundled.includes('@manuelselch/pi-sdk'), 'Coordinated SDK snapshot must be bundled for isolated installs');
   for (const file of result.files) {
     assert.ok(!file.path.startsWith('src/'), 'Source leaked into compiled artifact');
     assert.ok(!file.path.includes('vendor/'), 'Vendor archive leaked into compiled artifact');
@@ -35,8 +37,14 @@ try {
   const require = createRequire(join(directory, 'consumer.mjs'));
   const sdkRoot = join(directory, 'node_modules/@manuelselch/pi-server/node_modules/@manuelselch/pi-sdk');
   const installedSdk = JSON.parse(await readFile(join(sdkRoot, 'package.json'), 'utf8'));
-  assert.equal(installedSdk.version, '0.1.0');
-  assert.deepEqual(await readFile(join(sdkRoot, 'dist/protocol/theme.js')), await readFile(join(root, 'node_modules/@manuelselch/pi-sdk/dist/protocol/theme.js')));
+  const sourceSdk = join(root, 'node_modules/@manuelselch/pi-sdk');
+  const sourceManifest = JSON.parse(await readFile(join(sourceSdk, 'package.json'), 'utf8'));
+  assert.equal(installedSdk.version, sourceManifest.version);
+  assert.deepEqual(installedSdk.exports, sourceManifest.exports);
+  for (const file of ['dist/extension-ui.js', 'dist/protocol/models.js', 'dist/protocol/v2.js', 'dist/protocol/prompt-presentation.js']) {
+    assert.deepEqual(await readFile(join(sdkRoot, file)), await readFile(join(sourceSdk, file)), file);
+  }
+  run([npm, 'ls', '@manuelselch/pi-sdk', '--all'], directory);
   // Test helpers use the same bundled SDK without requiring a registry copy.
   const sdkEntry = JSON.stringify(pathToFileURL(join(sdkRoot, 'dist/index.js')).href);
   for (const name of ['react', 'vite', 'tsx']) assert.throws(() => require.resolve(name), name + ' unexpectedly installed');
@@ -63,5 +71,5 @@ void createPiRuntimeAdapter; void createRestartService; void snapshotData; void 
 `);
   run([join(root, 'node_modules/typescript/bin/tsc'), '--noEmit', '--strict', '--skipLibCheck', '--module', 'NodeNext', '--moduleResolution', 'NodeNext', '--target', 'ES2023', 'consumer.ts'], directory);
   assert.throws(() => require.resolve('@manuelselch/pi-server/dist/transport/websocket-transport.js'), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });
-  console.log('Verified compiled packed server exports, bundled theme SDK, SDK initialization, CLI/restart/signals and loopback safety in an isolated consumer.');
+  console.log('Verified compiled packed server exports, bundled SDK snapshot, SDK initialization, CLI/restart/signals and loopback safety in an isolated consumer.');
 } finally { await rm(directory, { recursive: true, force: true }); }
