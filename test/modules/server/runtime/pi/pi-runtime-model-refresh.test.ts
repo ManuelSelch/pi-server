@@ -8,6 +8,7 @@ function fixture() {
   const session = {
     sessionId: "s1", messages: [], isIdle: true,
     model: catalogue[0], thinkingLevel: "off", promptTemplates: [],
+    setModel: vi.fn(async (_model: unknown) => {}),
     getAvailableThinkingLevels: () => ["off"], supportsThinking: () => false,
     subscribe: () => () => {},
     prompt: vi.fn(async (_message: string) => {}),
@@ -49,12 +50,27 @@ describe("model picker refresh", () => {
     const shown = new Promise<void>((resolve) => {
       adapter.subscribe((event) => {
         if (event.type !== "prompts" || !event.prompts.length) return;
-        expect(event.prompts[0]!.options).toEqual(["p/new"]);
+        expect(event.prompts[0]!.options).toEqual(["p/new", "p/old"]);
+        expect(event.prompts[0]!.modelScope).toEqual({ scoped: ["p/new"] });
         adapter.respondToPrompt(event.prompts[0]!.id, { cancelled: true });
         resolve();
       });
     });
     await Promise.all([adapter.prompt("/model"), shown]);
+  });
+
+  it("allows selecting an available model outside the configured scope without changing settings", async () => {
+    const { adapter, session } = fixture();
+    adapter.subscribe(event => {
+      if (event.type !== "prompts" || !event.prompts.length) return;
+      adapter.respondToPrompt(event.prompts[0]!.id, { cancelled: false, value: "p/new" });
+    });
+
+    await adapter.prompt("/model");
+
+    expect(session.setModel).toHaveBeenCalledWith({ provider: "p", id: "new" });
+    expect(session.settingsManager.getEnabledModels()).toEqual(["p/old"]);
+    expect(options(adapter)).toEqual(["p/old"]);
   });
 
   it("resolves a new theme before extension startup when the runtime is replaced", async () => {

@@ -15,7 +15,7 @@ import { type SessionStatsView } from "./session-stats.js";
 import { MessageIdentity, mergeEntriesById, toChatMessages } from "./message-mapping.js";
 import { createSessionEventHandler } from "./event-mapping.js";
 import { projectFooter, projectSnapshot } from "./snapshot.js";
-import { offeredModels } from "./models.js";
+import { availableModels, offeredModels } from "./models.js";
 import { createPiRuntime } from "./runtime-factory.js";
 import { handleNativeCommand, NATIVE_COMMANDS } from "./native-commands.js";
 import { bindExtensionCommandContext, bindWebUiContext, extensionCommandContextActions } from "./extension-bindings.js";
@@ -303,6 +303,7 @@ export class PiRuntimeAdapter implements RuntimeAdapter {
       compact: () => this.compactSession(),
       refreshModels: () => this.refreshModels(),
       models: () => this.models,
+      availableModels: () => availableModels(this.runtime.session),
       ask: (request) => this.prompts.ask(request),
       setModel: (model) => this.setModel(model),
       setThinkingLevel: (level) => this.setThinkingLevel(level),

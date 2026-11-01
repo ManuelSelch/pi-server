@@ -262,7 +262,7 @@ interface PromptBase {
 }
 
 type Prompt = PromptBase & (
-  | { kind: "select"; options: string[] }
+  | { kind: "select"; options: string[]; submission: "immediate" | "explicit"; modelScope?: { scoped: string[] } }
   | { kind: "confirm"; message: string }
   | { kind: "input"; placeholder?: string }
   | { kind: "editor"; prefill?: string }
@@ -272,6 +272,9 @@ type PromptResult =
   | { cancelled: true }
   | { cancelled: false; value: string | boolean };
 // Server validates value against the pending prompt kind and offered options.
+// /model uses options for all available models and modelScope.scoped for the
+// enabledModels subset (including Pi glob resolution and no-match fallback).
+// Scope is presentation-only; selecting outside it does not edit enabledModels.
 
 interface Presentation {
   revision: number;

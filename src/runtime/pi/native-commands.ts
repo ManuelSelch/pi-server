@@ -24,6 +24,7 @@ export interface NativeCommandDependencies {
   compact(): Promise<void>;
   refreshModels(): Promise<void>;
   models: () => string[];
+  availableModels(): Promise<string[]>;
   ask(request: UiPromptRequest): Promise<UiPromptResult>;
   setModel(model: string): Promise<void>;
   setThinkingLevel(level: ThinkingLevel): void;
@@ -46,7 +47,8 @@ export async function handleNativeCommand(message: string, dependencies: NativeC
   }
   if (name === "model") {
     await dependencies.refreshModels();
-    const result = await dependencies.ask({ kind: "select", submission: "immediate", title: "Select a model", options: dependencies.models() });
+    const options = await dependencies.availableModels();
+    const result = await dependencies.ask({ kind: "select", submission: "immediate", title: "Select a model", options, modelScope: { scoped: dependencies.models() } });
     if (!result.cancelled) await dependencies.setModel(String(result.value));
     return true;
   }

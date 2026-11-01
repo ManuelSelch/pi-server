@@ -26,7 +26,7 @@ function compareModelReferences(left: string, right: string): number {
  * Patterns are globs (`anthropic/*`, `*sonnet*`) as well as exact references.
  */
 export async function offeredModels(session: AgentSessionRuntime["session"]): Promise<string[]> {
-  const available = (await session.modelRuntime.getAvailable()).map(modelReference).sort(compareModelReferences);
+  const available = await availableModels(session);
   const patterns = session.settingsManager.getEnabledModels();
   if (!patterns?.length) return available;
 
@@ -37,6 +37,11 @@ export async function offeredModels(session: AgentSessionRuntime["session"]): Pr
     return available;
   }
   return scopedModels.map((scoped) => modelReference(scoped.model)).sort(compareModelReferences);
+}
+
+/** All models available with this runtime's providers and credentials, independent of scope. */
+export async function availableModels(session: AgentSessionRuntime["session"]): Promise<string[]> {
+  return (await session.modelRuntime.getAvailable()).map(modelReference).sort(compareModelReferences);
 }
 
 /** Resolve the server-only model override after extension-provided providers load. */
