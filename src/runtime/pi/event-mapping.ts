@@ -57,7 +57,11 @@ export function createSessionEventHandler(dependencies: EventMappingDependencies
       }
       const failure = event.message as { stopReason?: string; errorMessage?: string };
       if (failure.stopReason === "error") {
-        dependencies.state.lastError = failure.errorMessage?.trim() || "The model ended the turn with an error.";
+        const error = failure.errorMessage?.trim() || "The model ended the turn with an error.";
+        dependencies.state.lastError = error;
+        // Pi's TUI reports a failed attempt as an immediate, transient error
+        // line. Keep it out of the persisted transcript projection.
+        dependencies.emit({ type: "notification", level: "error", message: error });
       }
       const final = toChatMessage(event.message, dependencies.identity);
       if (final && (final.role === "user" || final.role === "assistant" || final.role === "custom")) {

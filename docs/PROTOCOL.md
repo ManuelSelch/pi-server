@@ -144,7 +144,7 @@ Core session events use `sequence`; `session.snapshot` carries its existing `thr
 | `steering.queue.changed` | Session | `messages: string[]`; replace queued text, preserving duplicates |
 | `settings.changed` | Session | Complete `SessionSettings` |
 | `operation.finished` | Session | `operationId`, `requestId`, `outcome: completed / failed / aborted`, `error?` |
-| `notification.created` | Session | `level: info / warning / error`, `message`; transient, no acknowledgment |
+| `notification.created` | Session | `level: info / warning / error`, `message`; transient, no acknowledgment. Pi model failures are emitted at `message_end` as error notifications, before the run settles; these notifications are not added to saved session history |
 
 #### TUI and presentation events
 
