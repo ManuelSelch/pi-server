@@ -2,5 +2,5 @@ export { createPiChatExtensionRegistry, getPiChatExtensionRegistry } from "./ext
 export type {
   PiChatSlot, PiChatButton, PiChatBadge, PiChatActionContext, PiChatAction, PiChatHookEvent, PiChatHookName,
   PiChatExtensionSnapshotContext, ResolvedPiChatBadge, PiChatExtensionSnapshot, PiChatRegistrationOptions,
-  PiChatExtensionRegistry,
+  PiChatExtensionRegistry, PiChatSessionHost,
 } from "./extensions/extension-registry.js";

@@ -98,4 +98,34 @@ describe("Pi Chat extension registry", () => {
     expect(registry.store("demo", () => ({ enabled: false }))).toBe(first);
     expect(registry.store("demo", () => ({ enabled: false })).enabled).toBe(true);
   });
+
+  it("offers no session host until a server binds one", () => {
+    const registry = createPiChatExtensionRegistry();
+
+    expect(registry.sessionHost()).toBeUndefined();
+  });
+
+  it("hands extensions the bound session host until that binding is released", () => {
+    const registry = createPiChatExtensionRegistry();
+    const host = { archive: vi.fn(async () => {}) };
+
+    const release = registry.bindSessionHost(host);
+    expect(registry.sessionHost()).toBe(host);
+
+    release();
+    expect(registry.sessionHost()).toBeUndefined();
+  });
+
+  // Two servers can share the process-wide registry, e.g. during a restart.
+  it("keeps a newer session host when an older binding is released", () => {
+    const registry = createPiChatExtensionRegistry();
+    const older = { archive: vi.fn(async () => {}) };
+    const newer = { archive: vi.fn(async () => {}) };
+    const releaseOlder = registry.bindSessionHost(older);
+    registry.bindSessionHost(newer);
+
+    releaseOlder();
+
+    expect(registry.sessionHost()).toBe(newer);
+  });
 });

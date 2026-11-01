@@ -31,6 +31,12 @@ export class WebSocketTransport {
     this.unsubscribe = chat.subscribe((sessionId, event) => this.publisher.publish(sessionId, event));
     this.server.on("connection", socket => this.connect(socket));
   }
+  /** `session.archive` for in-process extensions, published to the controller alike. */
+  async archiveSession(path: string): Promise<void> {
+    await this.chat.archiveSession(path, true);
+    this.publisher.inventoryChanged();
+    await this.publisher.refreshProjects(true);
+  }
   async close(): Promise<void> {
     this.unsubscribe();
     for (const socket of this.server.clients) socket.terminate();

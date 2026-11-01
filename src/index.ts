@@ -3,7 +3,7 @@ import { createServer, type Server } from "node:http";
 import { resolve } from "node:path";
 import type { AgentSessionRuntime } from "@earendil-works/pi-coding-agent";
 import { ChatApplicationService } from "./application/chat-application-service.js";
-import type { PiChatExtensionRegistry } from "./extensions/extension-registry.js";
+import { getPiChatExtensionRegistry, type PiChatExtensionRegistry } from "./extensions/extension-registry.js";
 import { PiRuntimeAdapter } from "./runtime/pi/pi-runtime-adapter.js";
 import { ProjectSessionService } from "./projects/project-session-service.js";
 import { ProjectMetadataStore } from "./projects/project-metadata-store.js";
@@ -66,12 +66,15 @@ export function createPiServer(options: PiServerOptions = {}): PiServer {
     app.get("/{*path}", (_request, response) => response.sendFile(resolve(directory, "index.html")));
   }
   const httpServer = createServer(app);
-  const chat = new ChatApplicationService(options.runtime, factory, projects, options.restart, options.extensions, undefined, options.files);
+  const extensions = options.extensions ?? getPiChatExtensionRegistry();
+  const chat = new ChatApplicationService(options.runtime, factory, projects, options.restart, extensions, undefined, options.files);
   const transport = new WebSocketTransport(httpServer, chat, options.logger);
+  const releaseSessionHost = extensions.bindSessionHost({ archive: path => transport.archiveSession(path) });
   let closing: Promise<void> | undefined;
   return { httpServer, close() {
     return closing ??= (async () => {
       options.logger?.info("server.shutdown");
+      releaseSessionHost();
       try {
         await transport.close();
         if (httpServer.listening) await new Promise<void>((done, reject) => httpServer.close(error => error ? reject(error) : done()));

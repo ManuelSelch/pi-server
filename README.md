@@ -59,7 +59,7 @@ This is a private local backend, not an authenticated public service. Keep loopb
 - Root: `createPiServer(options)`, `createPiRuntimeAdapter(runtime)`, `createRestartService(options)`, `createFileLogger(options)` and their structural contracts.
 - Server options: runtime/factory, optional static directory, restart, extensions, structural file-open service, logger and catalogue configuration (lister, session directory, discovery, metadata file, home directory; null suppresses home).
 - Handle: `httpServer` for listen/address/error ownership; idempotent async `close()`. Close disposes transport and runtimes; callers flush/close injected loggers. Runtime creation stays lazy.
-- `/extensions`: existing registration types and registry functions, retaining `Symbol.for("pi-chat.extension-registry")`. Test reset is not exported here.
+- `/extensions`: existing registration types and registry functions, retaining `Symbol.for("pi-chat.extension-registry")`, plus the `PiChatSessionHost` that a running server binds for in-process extensions. Test reset is not exported here.
 - `/testing`: compiled fake runtime, fixture data and registry reset; no test-framework runtime dependency.
 - `/testing/loopback`: `runLoopbackFixture()`. A plain-Node launcher imports and awaits it, with no arguments. It creates a private canonical workspace, binds ephemeral loopback, rejects other project paths, prints `PI_FIXTURE_READY { directory, endpoint }`, and on SIGTERM explicitly closes retained runtimes and exclusively writes `cleanup.json`. The test driver removes successful artifacts.
 - No exports for concrete transport/application/catalogue/mapping internals. SDK `/protocol` remains authoritative.

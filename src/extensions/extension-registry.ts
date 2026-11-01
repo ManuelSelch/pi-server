@@ -73,6 +73,20 @@ export interface PiChatRegistrationOptions {
   owner?: string;
 }
 
+/**
+ * Saved-session operations a running server lends to in-process extensions.
+ * They follow the server's own protocol semantics rather than writing its
+ * metadata, which has exactly one writer.
+ */
+export interface PiChatSessionHost {
+  /**
+   * Archive saved history by path, like `session.archive`: rejects a busy
+   * runtime, persists metadata, closes an open runtime and publishes the
+   * project catalogue.
+   */
+  archive(sessionPath: string): Promise<void>;
+}
+
 export interface PiChatExtensionRegistry {
   registerButton(button: PiChatButton): void;
   /** Removes a button again, e.g. when an extension is switched off at runtime. */
@@ -91,6 +105,13 @@ export interface PiChatExtensionRegistry {
   snapshot(ctx?: PiChatExtensionSnapshotContext): PiChatExtensionSnapshot;
   runAction(actionId: string, ctx: PiChatActionContext): Promise<void>;
   emit<Name extends PiChatHookName>(name: Name, payload: HookPayload<Name>): Promise<void>;
+  /**
+   * The running server's session operations; undefined when no server hosts
+   * this process, e.g. in terminal Pi.
+   */
+  sessionHost(): PiChatSessionHost | undefined;
+  /** Server-side: lend session operations until the returned release runs. */
+  bindSessionHost(host: PiChatSessionHost): () => void;
 }
 
 class InMemoryPiChatExtensionRegistry implements PiChatExtensionRegistry {
@@ -101,6 +122,7 @@ class InMemoryPiChatExtensionRegistry implements PiChatExtensionRegistry {
   private readonly hooks = new Map<PiChatHookName, Map<string, (payload: unknown) => Promise<void> | void>>();
   private readonly states = new Map<string, Record<string, unknown> | unknown[]>();
   private readonly stores = new Map<string, object>();
+  private boundSessionHost?: PiChatSessionHost;
   /** Distinguishes registrations that named no owner, which stay additive. */
   private anonymous = 0;
 
@@ -162,6 +184,18 @@ class InMemoryPiChatExtensionRegistry implements PiChatExtensionRegistry {
 
   async emit<Name extends PiChatHookName>(name: Name, payload: HookPayload<Name>): Promise<void> {
     for (const handler of this.hooks.get(name)?.values() ?? []) await handler(payload);
+  }
+
+  sessionHost(): PiChatSessionHost | undefined {
+    return this.boundSessionHost;
+  }
+
+  /** The latest binding wins; releasing an older one leaves it in place. */
+  bindSessionHost(host: PiChatSessionHost): () => void {
+    this.boundSessionHost = host;
+    return () => {
+      if (this.boundSessionHost === host) this.boundSessionHost = undefined;
+    };
   }
 }
 
