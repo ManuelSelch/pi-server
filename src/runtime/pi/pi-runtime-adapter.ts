@@ -349,7 +349,9 @@ export class PiRuntimeAdapter implements RuntimeAdapter {
       await this.runtime.session.prompt(message, { streamingBehavior: "steer" });
       if (message.trim().startsWith("/")) await this.refreshModels();
     } catch (error) {
-      this.projectionState.lastError = error instanceof Error ? error.message : "Command failed.";
+      const message = error instanceof Error ? error.message.trim() || "Command failed." : "Command failed.";
+      if (this.projectionState.lastError !== message) this.emit({ type: "notification", level: "error", message });
+      this.projectionState.lastError = message;
       throw error;
     } finally {
       this.promptPending--;
