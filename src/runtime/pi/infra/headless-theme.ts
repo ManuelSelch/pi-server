@@ -4,14 +4,14 @@ import type { Theme } from "@earendil-works/pi-coding-agent";
 import { colorToHex, colorToRgb, indexedColor, parseColor, rgbColor } from "@earendil-works/pi-tui";
 import { sessionThemeSchema, type SessionTheme } from "@manuelselch/pi-sdk/protocol";
 
-// Pi 1.0.2 does not publicly export its file loader/validator. Resolve this
+// Pi does not publicly export its file loader/validator. Resolve this
 // compatibility seam from the installed package, not a sibling source checkout.
 const themeDirectory = new URL("modes/interactive/theme/", import.meta.resolve("@earendil-works/pi-coding-agent"));
 const { loadThemeFromPath, resolveThemeSetting } = await import(new URL("theme.js", themeDirectory).href) as {
   loadThemeFromPath(path: string, mode: "truecolor"): Theme;
   resolveThemeSetting(setting: string | undefined, appearance: "dark"): string | undefined;
 };
-const { validateThemeJson } = await import(new URL("theme-json.js", themeDirectory).href) as {
+const { validateThemeJson } = await import(new URL("theme-schema.js", themeDirectory).href) as {
   validateThemeJson(label: string, json: unknown): {
     vars?: Record<string, string | number>;
     export?: Partial<Record<keyof SessionTheme["surfaces"], string | number>>;
