@@ -71,7 +71,7 @@
     "@earendil-works/pi-mcp": "1.4.0",
     "@earendil-works/pi-telemetry": "1.4.0",
     "@earendil-works/pi-tui": "1.4.0",
-    "@manuelselch/pi-sdk": "0.2.0",
+    "@manuelselch/pi-sdk": "0.2.1",
     "express": "^5.2.1",
     "ws": "^8.21.3",
     "zod": "^4.6.4"
