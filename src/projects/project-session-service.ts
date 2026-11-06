@@ -81,7 +81,7 @@ export class ProjectSessionService {
     if (!cachedProject) this.scannedProjects = undefined;
   }
 
-  private async scanProjects(pins: readonly string[], active?: ActiveSessionSummary): Promise<Map<string, ChatProjectSummary>> {
+  private async scanProjects(pins: readonly string[], projectPaths: readonly string[], active?: ActiveSessionSummary): Promise<Map<string, ChatProjectSummary>> {
     const sessions = await this.lister.listAll();
     const byProject = new Map<string, ChatProjectSummary>();
 
@@ -119,6 +119,13 @@ export class ProjectSessionService {
       });
     }
 
+    for (const path of projectPaths) {
+      if (byProject.has(path)) continue;
+      byProject.set(path, {
+        path, displayPath: formatProjectDisplayPath(path), name: formatProjectName(path),
+        exists: existsSync(path), modified: 0, sessionCount: 0, sessions: [],
+      });
+    }
     if (active) this.includeActiveSession(byProject, active);
     this.includePinnedProjects(byProject, pins);
     await this.includeRegisteredWorktrees(byProject);
@@ -129,20 +136,22 @@ export class ProjectSessionService {
 
   /** Archive/restore and pin/unpin may reuse the scan; other changes still
    *  discover new sessions, titles, projects and worktrees from disk. */
-  async catalogue(active?: ActiveSessionSummary, options: { metadataOnly?: boolean } = {}): Promise<ProjectCatalogue> {
+  async catalogue(active?: ActiveSessionSummary, options: { metadataOnly?: boolean; projectPaths?: readonly string[] } = {}): Promise<ProjectCatalogue> {
     const normalizedActive = active ? { ...active, cwd: await canonicalPath(active.cwd), ...(active.path ? { path: await canonicalPath(active.path) } : {}) } : undefined;
+    const projectPaths = new Set(await Promise.all((options.projectPaths ?? []).map(canonicalPath)));
     let metadata = await this.metadata.read();
-    const cached = options.metadataOnly ? this.scannedProjects : undefined;
-    const byProject = cached ? structuredClone(cached) : await this.scanProjects(metadata.pins, normalizedActive);
+    const cached = options.metadataOnly && [...projectPaths].every(path => this.scannedProjects?.has(path)) ? this.scannedProjects : undefined;
+    const byProject = cached ? structuredClone(cached) : await this.scanProjects(metadata.pins, [...projectPaths], normalizedActive);
     // A scan can overlap an archive write. Overlay fresh metadata, never the
     // state captured before reading all transcripts and discovering worktrees.
     if (!cached) metadata = await this.metadata.read();
     if (cached && normalizedActive) this.includeActiveSession(byProject, normalizedActive);
     this.includePinnedProjects(byProject, metadata.pins);
-    // Unpinning a folder/repository with no history removes the projects that
-    // existed only because of that pin, including its empty worktrees.
+    // Live directories seed discovery but never create synthetic saved sessions.
+    // Keep their groups until the last runtime closes; otherwise empty groups
+    // exist only while pinned.
     const populatedGroups = new Set([...byProject.values()]
-      .filter(project => project.sessions.length > 0 || project.pinned)
+      .filter(project => project.sessions.length > 0 || project.pinned || projectPaths.has(project.path))
       .map(project => project.repositoryPath ?? project.path));
     for (const [path, project] of byProject) {
       if (!project.quickChats && !populatedGroups.has(project.repositoryPath ?? path)) byProject.delete(path);

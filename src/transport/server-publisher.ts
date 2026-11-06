@@ -136,7 +136,10 @@ export class ServerPublisher {
         // clients on the retired incarnation; publish a synchronous core capture.
         this.logger?.warn("session.replace_failed", { message: redactRuntimeError(error instanceof Error ? error.message : "Replacement snapshot failed") });
         if (previousSessionId) this.global("session.replaced", { previousSessionId, snapshot: this.snapshot(event.sessionId, this.chat.captureSnapshot(event.sessionId)) });
-      }).finally(() => this.inventoryChanged());
+      }).finally(() => {
+        this.inventoryChanged();
+        void this.refreshProjects();
+      });
       return;
     }
     if (!this.chat.openSessionIds().includes(raw)) return;

@@ -22,10 +22,16 @@ async function setup() {
   const lister = { listAll: vi.fn(async () => [{ path, id: "one", cwd, created: new Date(0), modified: new Date(1), messageCount: 1, firstMessage: "Hello" }]) };
   const discovery = { forDirectory: vi.fn(async () => undefined) };
   const service = new ProjectSessionService(lister, sessionsRoot, discovery, metadata, "");
-  const chat = new ChatApplicationService(new FakeRuntimeAdapter("fake-session"), {
+  const runtime = (id: string) => {
+    const adapter = new FakeRuntimeAdapter(id);
+    const snapshot = { ...adapter.snapshot(), projectPath: cwd };
+    vi.spyOn(adapter, "snapshot").mockReturnValue(snapshot);
+    return adapter;
+  };
+  const chat = new ChatApplicationService(runtime("fake-session"), {
     continueProject: vi.fn(),
-    newSession: vi.fn(async () => new FakeRuntimeAdapter("created")),
-    openSession: vi.fn(async () => new FakeRuntimeAdapter("opened")),
+    newSession: vi.fn(async () => runtime("created")),
+    openSession: vi.fn(async () => runtime("opened")),
   }, service);
   const publisher = new ServerPublisher(chat, () => {});
   return { path, cwd, lister, discovery, chat, publisher };

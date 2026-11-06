@@ -16,6 +16,7 @@ function setup(prepareSnapshot: () => Promise<() => RuntimeSnapshot> = async () 
     openSessionSnapshots: () => [replacement],
     captureSnapshot: () => replacement,
     prepareSnapshot,
+    currentCatalogue: async () => ({ projects: [] }),
   } as unknown as ChatApplicationService;
   const events: Event[] = [];
   const publisher = new ServerPublisher(chat, event => events.push(eventSchema.parse(event)));
@@ -34,7 +35,8 @@ describe("v2 session replacement publication", () => {
     await vi.waitFor(() => expect(events.filter(event => event.event === "session.replaced")).toHaveLength(1));
     expect(events.some(event => event.event === "session.closed")).toBe(false);
     expect(events.find(event => event.event === "session.replaced")).toMatchObject({ data: { previousSessionId: previous, snapshot: { sessionId: next, projectPath: "/project-worktree" } } });
-    const inventory = events.at(-1)!;
+    await vi.waitFor(() => expect(events.some(event => event.event === "project.list.changed")).toBe(true));
+    const inventory = events.find(event => event.event === "session.list.changed")!;
     expect(inventory).toMatchObject({ event: "session.list.changed", data: { sessions: [{ sessionId: next }] } });
     expect(JSON.stringify(inventory)).not.toContain(previous);
   });
@@ -45,5 +47,6 @@ describe("v2 session replacement publication", () => {
     await vi.waitFor(() => expect(events.some(event => event.event === "session.replaced")).toBe(true));
     expect(events.find(event => event.event === "session.replaced")).toMatchObject({ data: { previousSessionId: previous, snapshot: { sessionId: next } } });
     expect(events.some(event => event.event === "session.closed")).toBe(false);
+    await vi.waitFor(() => expect(events.some(event => event.event === "project.list.changed")).toBe(true));
   });
 });
