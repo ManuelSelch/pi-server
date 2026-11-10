@@ -53,7 +53,7 @@ The diagram is uncompressed, single-page Draw.io XML:
 - Each box has `concept="<folder>"` and the same folder label.
 - Each dependency arrow has `assoc="<source>-><target>"` and matching endpoints.
 - `strict: true` rejects unused allowed arrows as well as missing dependencies/boxes.
-- `transitive: false` requires every direct cross-slice import to be drawn, even if another path reaches its target.
+- `transitive: true` permits imports reachable through a chain of arrows: `A → B → C` also allows `A → C`. The diagram shows only essential arrows (the transitive reduction), not every direct import. This checks allowed reachability rather than an exact direct-import allow-list.
 
 From the repository root, check the current working tree with:
 

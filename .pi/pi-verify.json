@@ -6,6 +6,6 @@
     "slices": [
       "*"
     ],
-    "transitive": false
+    "transitive": true
   }
 }
