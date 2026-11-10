@@ -388,7 +388,7 @@ Arbitrary `ui.custom()` components, component-factory widgets, raw terminal inpu
 
 - Select/confirm/input/editor questions are snapshot-backed session state, including when no model turn is active. Clients choose modal, sheet or inline rendering.
 - Answers are cancelled or typed values: boolean for confirm, an offered string for select, string for input/editor. Validate against the pending question. First valid answer settles once; invalid, duplicate or late answers receive `invalidPromptAnswer`; expiration and teardown cancel the waiting extension.
-- Defaults: five-minute total timeout. Pending questions receive a sixty-second no-client grace when the last initialized client disconnects; other clients disconnecting do not suspend prompts. The first client becoming ready resumes prompts and cancels grace, not the total timeout. Uninitialized connections do not count. Questions created after disconnection currently rely on the total timeout rather than starting a new grace timer. Expiration/teardown cancels questions. State does not survive process restart.
+- Extension dialogs expire five minutes after creation or are cancelled on runtime teardown. Disconnect and reconnect leave their lifetime unchanged; initialization includes pending dialogs. Dialogs can also be created while clients are disconnected. State does not survive process restart.
 - Cancelling a local wait, timeout or disconnect does not cancel server execution. Use `run.abort` or answer a question as cancelled explicitly.
 - Lost mutation responses are uncertain outcomes. Never automatically resend input/create/actions/file-open/restart. Request IDs provide correlation, not idempotency. Recover current state before deciding what to do next.
 

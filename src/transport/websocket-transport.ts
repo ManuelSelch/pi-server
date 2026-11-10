@@ -70,11 +70,7 @@ export class WebSocketTransport {
     const connection = new V2Connection({
       serverInstanceId: this.publisher.serverInstanceId, connectionId, capabilities,
       isWritable: () => socket.readyState === WebSocket.OPEN,
-      onInitialized: () => {
-        const first = this.connections.size === 0;
-        this.connections.set(socket, { connection, capabilities: selected });
-        if (first) this.chat.resumePrompts();
-      },
+      onInitialized: () => { this.connections.set(socket, { connection, capabilities: selected }); },
       send: message => this.send(socket, message), close: (code, reason) => socket.close(code, reason),
       prepareInitialize: async (_params, selectedCapabilities) => { selected = selectedCapabilities; return this.publisher.prepareInitial(connectionId, selected); },
       execute: async request => {
@@ -96,7 +92,6 @@ export class WebSocketTransport {
       const initialized = this.connections.delete(socket);
       this.logger?.info("websocket.close", { connectionId, code, reason: reason.toString("utf8").slice(0, 256), initialized, runtimeActive: this.chat.openSessionSnapshots().some(snapshot => snapshot.isStreaming) });
       connection.dispose();
-      if (initialized && this.connections.size === 0) this.chat.suspendPrompts();
     });
   }
 }

@@ -200,15 +200,6 @@ export class ChatApplicationService {
     this.sessions.get(sessionId).respondToPrompt(promptId, result);
   }
 
-  /** No browser is in control: every session's dialogs start their grace period. */
-  suspendPrompts(): void {
-    for (const session of this.sessions.list()) session.adapter.suspendPrompts();
-  }
-
-  resumePrompts(): void {
-    for (const session of this.sessions.list()) session.adapter.resumePrompts();
-  }
-
   browseDirectories(request: DirectoryBrowse): Promise<DirectoryListing> {
     return this.directories.browse(request);
   }

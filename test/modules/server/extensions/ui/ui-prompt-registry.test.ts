@@ -4,9 +4,9 @@ import { UiPromptRegistry } from "../../../../../src/extensions/ui/ui-prompt-reg
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
-function registry(timeoutMs = 1_000, graceMs = 100) {
+function registry(timeoutMs = 1_000) {
   const changes: number[] = [];
-  const instance = new UiPromptRegistry((prompts) => changes.push(prompts.length), timeoutMs, graceMs);
+  const instance = new UiPromptRegistry((prompts) => changes.push(prompts.length), timeoutMs);
   return { instance, changes };
 }
 
@@ -55,20 +55,16 @@ describe("UiPromptRegistry", () => {
     expect(instance.list()).toEqual([]);
   });
 
-  it("survives a short disconnect but gives up after the grace period", async () => {
-    const { instance } = registry(10_000, 100);
-    const reloaded = instance.ask({ kind: "confirm", title: "Allow?" });
+  it("defaults to a five-minute lifetime from creation", async () => {
+    const instance = new UiPromptRegistry(() => {});
+    const answer = instance.ask({ kind: "confirm", title: "Allow?" });
 
-    instance.suspend();
-    vi.advanceTimersByTime(50);
-    instance.resume();
-    vi.advanceTimersByTime(500);
+    vi.advanceTimersByTime(299_999);
     expect(instance.list()).toHaveLength(1);
+    vi.advanceTimersByTime(1);
 
-    instance.suspend();
-    vi.advanceTimersByTime(100);
-
-    await expect(reloaded).resolves.toEqual({ cancelled: true });
+    await expect(answer).resolves.toEqual({ cancelled: true });
+    expect(instance.list()).toEqual([]);
   });
 
   it("cancels everything on dispose so no extension stays blocked", async () => {

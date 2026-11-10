@@ -16,7 +16,13 @@ export class SessionDriver {
     expect(this.runtime.snapshot().messages[0]).toMatchObject({ role: "user", text });
   }
 
-  askForConfirmation() { return this.runtime.uiContext().confirm("Proceed?", "Still connected"); }
+  askForConfirmation() { return this.runtime.uiContext().confirm("Proceed?", "Allow action"); }
+
+  shouldHavePendingConfirmation() {
+    expect(this.runtime.snapshot().prompts).toEqual([expect.objectContaining({ kind: "confirm", title: "Proceed?" })]);
+  }
+
+  shouldHaveNoDialogs() { expect(this.runtime.snapshot().prompts).toEqual([]); }
 }
 
 export class ClientDriver {
@@ -80,10 +86,19 @@ export class ClientDriver {
   }
 
   async answerConfirmation(session: SessionDriver) {
-    const event = await this.client.wait(message => message.type === "event" && message.event === "prompt.list.changed" && message.data.prompts.length > 0);
-    if (event.type !== "event" || event.event !== "prompt.list.changed") throw new Error("Expected prompt");
-    this.client.send("prompt.answer", "answer", { promptId: event.data.prompts[0]!.id, result: { cancelled: false, value: true } }, session.id);
+    let prompt = this.initial?.find(snapshot => snapshot.sessionId === session.id)?.prompts[0];
+    if (!prompt) {
+      const event = await this.client.wait(message => message.type === "event" && message.event === "prompt.list.changed" && message.sessionId === session.id && message.data.prompts.length > 0);
+      if (event.type !== "event" || event.event !== "prompt.list.changed") throw new Error("Expected prompt");
+      prompt = event.data.prompts[0]!;
+    }
+    this.client.send("prompt.answer", "answer", { promptId: prompt.id, result: { cancelled: false, value: true } }, session.id);
     expect(await this.client.response("answer")).toMatchObject({ ok: true });
+  }
+
+  shouldRecoverConfirmation(session: SessionDriver) {
+    expect(this.initial).toContainEqual(expect.objectContaining({ sessionId: session.id,
+      prompts: [expect.objectContaining({ kind: "confirm", title: "Proceed?" })] }));
   }
 
   async shouldRemainUsable() {
@@ -117,8 +132,6 @@ export class MultiClientDriver {
   private readonly runtimes = [new FakeRuntimeAdapter("first"), new FakeRuntimeAdapter("second")];
   private readonly clients: ClientDriver[] = [];
   private readonly serverSockets = new Map<string, WebSocket>();
-  private readonly resume = vi.spyOn(this.runtimes[0]!, "resumePrompts");
-  private readonly suspend = vi.spyOn(this.runtimes[0]!, "suspendPrompts");
   private readonly releases: (() => void)[] = [];
 
   async start() {
@@ -180,21 +193,15 @@ export class MultiClientDriver {
     if (peer) await peer.shouldRemainUsable();
   }
 
-  shouldKeepDialogsAvailable() {
-    expect(this.resume).toHaveBeenCalledOnce();
-    expect(this.suspend).not.toHaveBeenCalled();
-  }
+  useDialogClock() { vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] }); }
 
-  async shouldStartDialogGrace() {
-    await vi.waitFor(() => expect(this.suspend).toHaveBeenCalledOnce());
-  }
-
-  shouldCancelDialogGrace() { expect(this.resume).toHaveBeenCalledTimes(2); }
+  async advanceTime(milliseconds: number) { await vi.advanceTimersByTimeAsync(milliseconds); }
 
   async close() {
     this.releaseRuns();
     for (const client of this.clients) client.terminate();
     if (this.server) await this.server.close();
     vi.restoreAllMocks();
+    vi.useRealTimers();
   }
 }

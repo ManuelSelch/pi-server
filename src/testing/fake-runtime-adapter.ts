@@ -86,14 +86,6 @@ export class FakeRuntimeAdapter implements RuntimeAdapter {
     this.promptRegistry.respond(promptId, result);
   }
 
-  suspendPrompts(): void {
-    this.promptRegistry.suspend();
-  }
-
-  resumePrompts(): void {
-    this.promptRegistry.resume();
-  }
-
   async abort(): Promise<void> {
     this.streaming = false;
     this.emit({ type: "runtimeStatus", status: "idle" });

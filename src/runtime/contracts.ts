@@ -57,9 +57,6 @@ export interface RuntimeAdapter {
   prompt(message: string): Promise<void>;
   abort(): Promise<void>;
   respondToPrompt(promptId: string, result: UiPromptResult): void;
-  /** Called when no browser controls the session, and when one takes over again. */
-  suspendPrompts(): void;
-  resumePrompts(): void;
   setThinkingLevel(level: ThinkingLevel): Promise<void> | void;
   setModel(model: string): Promise<void>;
   compact(): Promise<void>;

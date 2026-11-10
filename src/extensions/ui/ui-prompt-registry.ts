@@ -3,11 +3,6 @@ import { uiPromptSchema, type UiPrompt, type UiPromptResult } from "@manuelselch
 
 /** A forgotten dialog must not block an extension (or a tool call) forever. */
 export const PROMPT_TIMEOUT_MS = 5 * 60_000;
-/**
- * A reload should not cancel a permission gate, so a prompt survives a short
- * time without a controlling browser before it gives up.
- */
-export const DISCONNECT_GRACE_MS = 60_000;
 
 export type UiPromptRequest = Omit<UiPrompt, "id">;
 
@@ -31,12 +26,10 @@ function schedule(callback: () => void, delay: number): ReturnType<typeof setTim
  */
 export class UiPromptRegistry {
   private readonly pending = new Map<string, PendingPrompt>();
-  private graceTimer?: ReturnType<typeof setTimeout>;
 
   constructor(
     private readonly onChange: (prompts: UiPrompt[]) => void,
     private readonly timeoutMs = PROMPT_TIMEOUT_MS,
-    private readonly graceMs = DISCONNECT_GRACE_MS,
   ) {}
 
   ask(request: UiPromptRequest): Promise<UiPromptResult> {
@@ -64,24 +57,7 @@ export class UiPromptRegistry {
     return [...this.pending.values()].map((entry) => entry.prompt);
   }
 
-  /** Called when no browser is in control: start the grace period. */
-  suspend(): void {
-    if (this.graceTimer || this.pending.size === 0) return;
-    this.graceTimer = schedule(() => {
-      this.graceTimer = undefined;
-      this.cancelAll();
-    }, this.graceMs);
-  }
-
-  /** Called when a browser takes control again. */
-  resume(): void {
-    if (!this.graceTimer) return;
-    clearTimeout(this.graceTimer);
-    this.graceTimer = undefined;
-  }
-
   dispose(): void {
-    this.resume();
     this.cancelAll();
   }
 
