@@ -11,8 +11,8 @@ function setup(overrides: Partial<V2ConnectionHost> = {}, limits: import("../../
   let current = false;
   const host: V2ConnectionHost = {
     serverInstanceId: "server", connectionId: "connection", capabilities: ["presentation"],
-    isWritable: () => true, isController: () => current,
-    claim: () => { current = true; },
+    isWritable: () => true, isActive: () => current,
+    activate: () => { current = true; },
     send: (message) => { sent.push(message); }, close,
     prepareInitialize: async () => () => initialized,
     execute: vi.fn(async () => ({ kind: "completed" as const, result: { state: "completed" } })),
@@ -27,18 +27,45 @@ describe("v2 connection admission and correlation", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it("does not claim control until preparation succeeds and initialization is queued atomically", async () => {
+  it("does not activate until preparation succeeds and initialization is queued atomically", async () => {
     const ready = deferred<() => Result<"server.initialize">>();
     const { connection, host, sent } = setup({ prepareInitialize: () => ready.promise });
-    const claim = vi.spyOn(host, "claim");
+    const activate = vi.spyOn(host, "activate");
     connection.receive(request());
-    expect(claim).not.toHaveBeenCalled(); expect(sent).toEqual([]);
+    expect(activate).not.toHaveBeenCalled(); expect(sent).toEqual([]);
     ready.resolve(() => initialized); await settle();
-    expect(claim).toHaveBeenCalledOnce();
+    expect(activate).toHaveBeenCalledOnce();
     expect(sent).toEqual([{ version: 2, type: "response", requestId: "r1", ok: true, result: initialized }]);
     connection.receive(request("server.ping", "r2")); await settle();
     expect(sent[1]).toMatchObject({ requestId: "r2", ok: true, result: { state: "completed" } });
     connection.dispose(); expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("becomes ready before activation callbacks and queues their events after initialization", async () => {
+    const { connection, host, sent } = setup();
+    const activate = host.activate;
+    host.activate = () => {
+      activate();
+      expect(connection.ready).toBe(true);
+      host.send({ version: 2, type: "event", event: "server.stopping", serverInstanceId: "server", data: { reason: "restart" } });
+    };
+
+    connection.receive(request()); await settle();
+
+    expect(sent.map(message => message.type)).toEqual(["response", "event"]);
+    connection.dispose();
+  });
+
+  it("does not activate when the initial response cannot be sent", async () => {
+    const { connection, host, close } = setup({ send: () => { throw new Error("Socket failed"); } });
+    const activate = vi.spyOn(host, "activate");
+
+    connection.receive(request()); await settle();
+
+    expect(activate).not.toHaveBeenCalled();
+    expect(connection.ready).toBe(false);
+    expect(close).toHaveBeenCalled();
+    connection.dispose();
   });
 
   it("rejects v1, malformed envelopes and work before readiness without invoking the host", async () => {
@@ -83,7 +110,7 @@ describe("v2 connection admission and correlation", () => {
     work.resolve(); await settle(); connection.dispose();
   });
 
-  it("never sends a completed response to a displaced or closed origin and never cancels admitted work", async () => {
+  it("never sends a completed response to an inactive or closed origin and never cancels admitted work", async () => {
     const execution = deferred<{ kind: "completed"; result: object }>();
     const { connection, sent, displace } = setup({ execute: () => execution.promise });
     connection.receive(request()); await settle();
@@ -153,11 +180,11 @@ describe("v2 connection admission and correlation", () => {
     connection.dispose(); oversized.connection.dispose();
   });
 
-  it("refuses inconsistent initial inventories before displacing a working controller", async () => {
+  it("refuses inconsistent initial inventories before activating a client", async () => {
     const { connection, sent, host, close } = setup({ prepareInitialize: async () => () => ({ ...initialized, snapshots: [{ sessionId: "extra" }] } as unknown as Result<"server.initialize">) });
-    const claim = vi.spyOn(host, "claim");
+    const activate = vi.spyOn(host, "activate");
     connection.receive(request()); await settle();
-    expect(claim).not.toHaveBeenCalled(); expect(close).toHaveBeenCalled();
+    expect(activate).not.toHaveBeenCalled(); expect(close).toHaveBeenCalled();
     expect(sent[0]).toMatchObject({ requestId: "r1", ok: false });
     connection.dispose();
   });

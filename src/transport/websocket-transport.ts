@@ -21,7 +21,7 @@ function validOrigin(request: IncomingMessage): boolean {
 }
 export class WebSocketTransport {
   private readonly server: WebSocketServer;
-  private controller?: { socket: WebSocket; connection: V2Connection; capabilities: readonly Capability[] };
+  private readonly connections = new Map<WebSocket, { connection: V2Connection; capabilities: readonly Capability[] }>();
   private readonly publisher: ServerPublisher;
   private readonly unsubscribe: () => void;
   constructor(httpServer: Server, private readonly chat: ChatApplicationService, private readonly logger?: FileLogger) {
@@ -31,7 +31,7 @@ export class WebSocketTransport {
     this.unsubscribe = chat.subscribe((sessionId, event) => this.publisher.publish(sessionId, event));
     this.server.on("connection", socket => this.connect(socket));
   }
-  /** `session.archive` for in-process extensions, published to the controller alike. */
+  /** `session.archive` for in-process extensions, published to all ready clients alike. */
   async archiveSession(path: string): Promise<void> {
     await this.chat.archiveSession(path, true);
     this.publisher.inventoryChanged();
@@ -51,16 +51,17 @@ export class WebSocketTransport {
     socket.send(payload, error => { if (error) socket.terminate(); });
   }
   private publish(event: Event): void {
-    const controller = this.controller;
-    if (!controller?.connection.ready) return;
-    if (event.event === "presentation.changed" && !controller.capabilities.includes("presentation")) return;
-    let publication = event;
-    if (!controller.capabilities.includes("presentation") && (event.event === "session.snapshot" || event.event === "session.replaced")) {
-      const snapshot = event.event === "session.snapshot" ? event.data : event.data.snapshot;
-      const { presentation: _presentation, ...core } = snapshot;
-      publication = event.event === "session.snapshot" ? { ...event, data: core } : { ...event, data: { ...event.data, snapshot: core } };
+    for (const [socket, client] of this.connections) {
+      if (!client.connection.ready) continue;
+      if (event.event === "presentation.changed" && !client.capabilities.includes("presentation")) continue;
+      let publication = event;
+      if (!client.capabilities.includes("presentation") && (event.event === "session.snapshot" || event.event === "session.replaced")) {
+        const snapshot = event.event === "session.snapshot" ? event.data : event.data.snapshot;
+        const { presentation: _presentation, ...core } = snapshot;
+        publication = event.event === "session.snapshot" ? { ...event, data: core } : { ...event, data: { ...event.data, snapshot: core } };
+      }
+      try { this.send(socket, publication); } catch { socket.terminate(); }
     }
-    try { this.send(controller.socket, publication); } catch { controller.socket.terminate(); }
   }
   private connect(socket: WebSocket): void {
     const connectionId = randomUUID(); let selected: Capability[] = [];
@@ -69,12 +70,11 @@ export class WebSocketTransport {
     const connection = new V2Connection({
       serverInstanceId: this.publisher.serverInstanceId, connectionId, capabilities,
       isWritable: () => socket.readyState === WebSocket.OPEN,
-      isController: () => this.controller?.socket === socket,
-      claim: () => {
-        const previous = this.controller;
-        this.controller = { socket, connection, capabilities: selected };
-        previous?.connection.dispose(); previous?.socket.close(4001, "Controller replaced");
-        this.chat.resumePrompts();
+      isActive: () => this.connections.has(socket),
+      activate: () => {
+        const first = this.connections.size === 0;
+        this.connections.set(socket, { connection, capabilities: selected });
+        if (first) this.chat.resumePrompts();
       },
       send: message => this.send(socket, message), close: (code, reason) => socket.close(code, reason),
       prepareInitialize: async (_params, selectedCapabilities) => { selected = selectedCapabilities; return this.publisher.prepareInitial(connectionId, selected); },
@@ -94,8 +94,9 @@ export class WebSocketTransport {
     socket.on("message", (data, binary) => { if (binary) { socket.close(1003, "Text JSON frames required"); return; } connection.receive(data.toString()); });
     socket.on("error", error => this.logger?.error("websocket.error", { connectionId, message: error.message }));
     socket.on("close", (code, reason) => {
-      this.logger?.info("websocket.close", { connectionId, code, reason: reason.toString("utf8").slice(0, 256), controller: this.controller?.socket === socket, runtimeActive: this.chat.openSessionSnapshots().some(snapshot => snapshot.isStreaming) });
-      connection.dispose(); if (this.controller?.socket !== socket) return; this.controller = undefined; this.chat.suspendPrompts();
+      this.logger?.info("websocket.close", { connectionId, code, reason: reason.toString("utf8").slice(0, 256), initialized: this.connections.has(socket), runtimeActive: this.chat.openSessionSnapshots().some(snapshot => snapshot.isStreaming) });
+      connection.dispose();
+      if (this.connections.delete(socket) && this.connections.size === 0) this.chat.suspendPrompts();
     });
   }
 }

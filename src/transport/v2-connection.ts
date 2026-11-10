@@ -16,9 +16,9 @@ export interface V2ConnectionHost {
   connectionId: string;
   capabilities: readonly Capability[];
   isWritable(): boolean;
-  isController(): boolean;
-  /** Must not await: claim, snapshot capture and initial send form one publication turn. */
-  claim(): void;
+  isActive(): boolean;
+  /** Called synchronously after the initial response is queued and readiness is set. */
+  activate(): void;
   send(message: ServerMessage): void;
   close(code: number, reason: string): void;
   /** Asynchronous preparation returns a synchronous fresh capture, not a stale snapshot. */
@@ -50,7 +50,7 @@ export class V2Connection {
   }
 
   private get closed(): boolean { return this.phase === "closed"; }
-  get ready(): boolean { return this.phase === "ready" && this.host.isController() && this.host.isWritable(); }
+  get ready(): boolean { return this.phase === "ready" && this.host.isActive() && this.host.isWritable(); }
   dispose(): void { this.phase = "closed"; clearTimeout(this.timer); }
 
   receive(text: string): void {
@@ -78,7 +78,7 @@ export class V2Connection {
       return;
     }
     if (!this.ready) {
-      this.reject(requestId, { code: this.phase === "ready" ? "controllerReplaced" : "notInitialized", message: "Initialize and hold control before sending work." }); return;
+      this.reject(requestId, { code: "notInitialized", message: "Initialize before sending work." }); return;
     }
     const capability = operationSchemas[request.method].capability;
     if (capability && !this.capabilities.includes(capability)) { this.reject(requestId, { code: "unsupportedOperation", message: `Capability was not selected: ${capability}` }); return; }
@@ -94,15 +94,14 @@ export class V2Connection {
       if (this.phase === "closed" || !this.host.isWritable()) return;
       const result = initializeResultSchema.parse(capture());
       this.checkInitialization(result, selected);
-      // No await from fresh capture through claim/send. Later events follow the
-      // full barrier, and unfinished initialization never displaces a controller.
-      this.host.claim();
-      if (this.closed || !this.host.isController()) return;
+      // No await from fresh capture through send/activation. Later events follow
+      // the full barrier; other clients remain independent throughout.
       this.capabilities = selected;
       this.reply(request.requestId, result, false);
       if (this.closed) return;
       this.phase = "ready";
       clearTimeout(this.timer);
+      this.host.activate();
     } catch (error) {
       this.reject(request.requestId, failure(error), false);
       this.dispose(); this.close(1011, "Initialization failed");
@@ -150,11 +149,11 @@ export class V2Connection {
     if (request.method === "server.restart") return;
     try { this.host.outcome(request, operationId, outcome, error); } catch { /* State recovery, never a second request response. */ }
   }
-  private reply(requestId: string, result: unknown, requireControl = true): void {
-    this.send({ version: VERSION, type: "response", requestId, ok: true, result: result as JsonValue }, requireControl);
+  private reply(requestId: string, result: unknown, requireActive = true): void {
+    this.send({ version: VERSION, type: "response", requestId, ok: true, result: result as JsonValue }, requireActive);
   }
-  private reject(requestId: string, error: ProtocolError, requireControl = true): void {
-    this.send({ version: VERSION, type: "response", requestId, ok: false, error }, this.phase === "ready" && requireControl);
+  private reject(requestId: string, error: ProtocolError, requireActive = true): void {
+    this.send({ version: VERSION, type: "response", requestId, ok: false, error }, this.phase === "ready" && requireActive);
   }
   private protocolError(code: string, message: string): void {
     this.send({ version: VERSION, type: "protocolError", serverInstanceId: this.host.serverInstanceId, error: { code, message } }, false);
@@ -163,8 +162,8 @@ export class V2Connection {
     if (this.phase === "closed") return;
     this.protocolError(code, message); this.dispose(); this.close(1008, code);
   }
-  private send(message: ServerMessage, requireControl: boolean): void {
-    if (this.phase === "closed" || !this.host.isWritable() || (requireControl && !this.host.isController())) return;
+  private send(message: ServerMessage, requireActive: boolean): void {
+    if (this.phase === "closed" || !this.host.isWritable() || (requireActive && !this.host.isActive())) return;
     try { this.host.send(message); }
     catch { this.dispose(); this.close(1011, "Unable to publish response"); }
   }

@@ -52,7 +52,7 @@ pi-server --static-directory /path/to/assets --pid-file /path/to/server.pid --lo
 
 Headless by default: `/health` and `/ws`, no session creation or browser launch. Explicit static hosting supplies SPA fallback. Relative flags resolve against the invocation directory; `--project` selects process cwd, while session create/open still use protocol paths and existing default home-folder behavior. Port 0 selects an ephemeral port. `--no-restart` disables restart for external supervisors. Standalone restart re-executes compiled JS without a build; the current waiter uses POSIX `/bin/sh`. SIGINT/SIGTERM dispose listeners/runtimes and flush logs. PID record is `{ pid, port, cwd }`; log filename remains `pi-chat.log` for compatibility. No CLI read of `PI_CHAT_HOST/PORT/CWD/PID_FILE`; the Chat adapter remains responsible for those settings.
 
-This is a private local backend, not an authenticated public service. Keep loopback defaults; auth/TLS belong to a trusted proxy. Existing Origin checks and v2 controller semantics remain unchanged.
+This is a private local backend, not an authenticated public service. Keep loopback defaults; auth/TLS belong to a trusted proxy. Origin checks remain enforced. Multiple initialized v2 clients may operate shared runtimes concurrently; see [protocol connection semantics](docs/PROTOCOL.md#2-connection).
 
 ## Public API ownership
 

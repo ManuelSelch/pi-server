@@ -28,5 +28,5 @@ if (sessions) await sessions.archive(sessionFile);
 ```
 
 - `sessionHost()` is undefined when no server hosts the process, such as terminal Pi. Treat that as unsupported rather than writing catalogue metadata yourself: the server is its only writer.
-- `archive(path)` has `session.archive` semantics: a busy runtime is rejected with a `sessionBusy` error, metadata is persisted first, an open runtime is then closed, and the controller receives `session.list.changed`/`project.list.changed`. Paths outside the Pi session folder are rejected. A failure after persistence may leave the session archived; report it rather than retrying blindly.
+- `archive(path)` has `session.archive` semantics: a busy runtime is rejected with a `sessionBusy` error, metadata is persisted first, an open runtime is then closed, and all ready clients receive `session.list.changed`/`project.list.changed`. Paths outside the Pi session folder are rejected. A failure after persistence may leave the session archived; report it rather than retrying blindly.
 - The latest server binding wins; releasing an older one does not withdraw a newer one. Only archiving is offered; unarchive, open and create remain protocol operations.

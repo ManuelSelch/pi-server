@@ -165,12 +165,15 @@ it("rejects foreign browser origins before opening a connection", async () => {
   const status = await new Promise<number>(resolve => { socket.on("unexpected-response", (_request, response) => { resolve(response.statusCode!); response.resume(); socket.terminate(); }); socket.on("error", () => {}); });
   expect(status).toBe(403);
 });
-it("does not replace a ready controller until the candidate initializes", async () => {
+it("keeps both connections usable after a second client initializes", async () => {
   server = createPiServer({ runtime: new FakeRuntimeAdapter() }); server.httpServer.listen(0, "127.0.0.1"); await once(server.httpServer, "listening");
   const first = await connect(); await first.initialize();
   const candidate = await connect();
   first.send("server.ping", "ping");
   expect(await first.inbox.wait(message => message.requestId === "ping")).toMatchObject({ ok: true });
-  const closed = once(first.socket, "close"); await candidate.initialize();
-  expect((await closed)[0]).toBe(4001);
+  await candidate.initialize();
+  first.send("server.ping", "shared-id");
+  candidate.send("server.ping", "shared-id");
+  expect(await first.inbox.wait(message => message.requestId === "shared-id")).toMatchObject({ ok: true });
+  expect(await candidate.inbox.wait(message => message.requestId === "shared-id")).toMatchObject({ ok: true });
 });

@@ -86,7 +86,7 @@ describe("v2 WebSocket transport", () => {
     server = createPiServer({ runtime: new FakeRuntimeAdapter(), logger: logger });
     await new Promise<void>(resolve => server.httpServer.listen(0, "127.0.0.1", resolve));
     const client = await v2Socket(server); await client.initialize(); client.socket.close(1000, "test close");
-    await vi.waitFor(() => expect(logger.info).toHaveBeenCalledWith("websocket.close", expect.objectContaining({ code: 1000, controller: true, runtimeActive: false })));
+    await vi.waitFor(() => expect(logger.info).toHaveBeenCalledWith("websocket.close", expect.objectContaining({ code: 1000, initialized: true, runtimeActive: false })));
     expect(logger.info).toHaveBeenCalledWith("websocket.open", { connectionId: expect.any(String) });
     expect(JSON.stringify(logger.info.mock.calls)).not.toContain('"params"');
   });

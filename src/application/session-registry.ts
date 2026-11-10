@@ -113,7 +113,7 @@ export class SessionRegistry {
     if (index === -1) return;
     const entry = this.entries[index]!;
     // Keep identity/subscriptions until disposal is confirmed. A partial failure
-    // must remain discoverable so the controller can explicitly retry close.
+    // must remain discoverable so a client can explicitly retry close.
     await entry.adapter.dispose();
     entry.unsubscribe();
     const currentIndex = this.entries.indexOf(entry);
