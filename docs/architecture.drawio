@@ -1,130 +1,145 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mxfile host="app.diagrams.net">
   <diagram id="pi-server-architecture" name="Pi Server modules">
-    <mxGraphModel dx="1500" dy="1000" grid="1" gridSize="10" page="1" pageScale="1" pageWidth="1500" pageHeight="1000">
+    <mxGraphModel dx="1700" dy="1120" grid="1" gridSize="10" guides="1" connect="1" arrows="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1120">
       <root>
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="Pi Server | module architecture" style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontColor=#334155;fontSize=28;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="40" y="20" width="1620" height="50" as="geometry"/></mxCell>
+        <mxCell id="subtitle" value="Single Node.js process. Dependencies flow downward; arrow means source imports target, including type-only imports." style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontColor=#334155;fontSize=17;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="40" y="75" width="1620" height="35" as="geometry"/></mxCell>
+        <mxCell id="entry-heading" value="ENTRY POINTS &amp; TEST SUPPORT" style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontColor=#334155;fontSize=14;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="80" y="125" width="1500" height="25" as="geometry"/></mxCell>
+        <mxCell id="application-heading" value="APPLICATION COORDINATION &amp; DIAGNOSTICS" style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontColor=#334155;fontSize=14;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="80" y="365" width="1500" height="25" as="geometry"/></mxCell>
+        <mxCell id="adapters-heading" value="RUNTIME &amp; HOST RESOURCES" style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontColor=#334155;fontSize=14;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="80" y="605" width="1500" height="25" as="geometry"/></mxCell>
+        <mxCell id="extensions-heading" value="EXTENSION REGISTRATION &amp; UI STATE" style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontColor=#334155;fontSize=14;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="80" y="845" width="1500" height="25" as="geometry"/></mxCell>
+        <object id="box-testing" label="testing" concept="testing">
+          <mxCell vertex="1" parent="1" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#f3e8ff;strokeColor=#a78bfa;strokeWidth=2;fontColor=#0f172a;fontSize=20;fontStyle=1;">
+            <mxGeometry x="80" y="160" width="240" height="90" as="geometry"/>
+          </mxCell>
+        </object>
         <object id="box-transport" label="transport" concept="transport">
-          <mxCell vertex="1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=20;fontStyle=1;">
-            <mxGeometry x="60" y="280" width="240" height="100" as="geometry"/>
+          <mxCell vertex="1" parent="1" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#60a5fa;strokeWidth=2;fontColor=#0f172a;fontSize=20;fontStyle=1;">
+            <mxGeometry x="960" y="160" width="240" height="90" as="geometry"/>
           </mxCell>
         </object>
         <object id="box-application" label="application" concept="application">
-          <mxCell vertex="1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=20;fontStyle=1;">
-            <mxGeometry x="420" y="280" width="240" height="100" as="geometry"/>
-          </mxCell>
-        </object>
-        <object id="box-runtime" label="runtime" concept="runtime">
-          <mxCell vertex="1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=20;fontStyle=1;">
-            <mxGeometry x="800" y="130" width="240" height="100" as="geometry"/>
-          </mxCell>
-        </object>
-        <object id="box-extensions" label="extensions" concept="extensions">
-          <mxCell vertex="1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=20;fontStyle=1;">
-            <mxGeometry x="1160" y="130" width="240" height="100" as="geometry"/>
-          </mxCell>
-        </object>
-        <object id="box-projects" label="projects" concept="projects">
-          <mxCell vertex="1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=20;fontStyle=1;">
-            <mxGeometry x="800" y="330" width="240" height="100" as="geometry"/>
-          </mxCell>
-        </object>
-        <object id="box-bootstrap" label="bootstrap" concept="bootstrap">
-          <mxCell vertex="1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=20;fontStyle=1;">
-            <mxGeometry x="800" y="530" width="240" height="100" as="geometry"/>
-          </mxCell>
-        </object>
-        <object id="box-files" label="files" concept="files">
-          <mxCell vertex="1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=20;fontStyle=1;">
-            <mxGeometry x="800" y="730" width="240" height="100" as="geometry"/>
+          <mxCell vertex="1" parent="1" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#60a5fa;strokeWidth=2;fontColor=#0f172a;fontSize=20;fontStyle=1;">
+            <mxGeometry x="720" y="400" width="240" height="90" as="geometry"/>
           </mxCell>
         </object>
         <object id="box-logging" label="logging" concept="logging">
-          <mxCell vertex="1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=20;fontStyle=1;">
-            <mxGeometry x="420" y="70" width="240" height="100" as="geometry"/>
+          <mxCell vertex="1" parent="1" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#d6b656;strokeWidth=2;fontColor=#0f172a;fontSize=20;fontStyle=1;">
+            <mxGeometry x="1240" y="400" width="240" height="90" as="geometry"/>
           </mxCell>
         </object>
-        <object id="box-testing" label="testing" concept="testing">
-          <mxCell vertex="1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=20;fontStyle=1;">
-            <mxGeometry x="60" y="70" width="240" height="100" as="geometry"/>
+        <object id="box-runtime" label="runtime" concept="runtime">
+          <mxCell vertex="1" parent="1" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#86b891;strokeWidth=2;fontColor=#0f172a;fontSize=20;fontStyle=1;">
+            <mxGeometry x="240" y="640" width="240" height="90" as="geometry"/>
+          </mxCell>
+        </object>
+        <object id="box-projects" label="projects" concept="projects">
+          <mxCell vertex="1" parent="1" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#d6b656;strokeWidth=2;fontColor=#0f172a;fontSize=20;fontStyle=1;">
+            <mxGeometry x="620" y="640" width="240" height="90" as="geometry"/>
+          </mxCell>
+        </object>
+        <object id="box-bootstrap" label="bootstrap" concept="bootstrap">
+          <mxCell vertex="1" parent="1" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#d6b656;strokeWidth=2;fontColor=#0f172a;fontSize=20;fontStyle=1;">
+            <mxGeometry x="1000" y="640" width="240" height="90" as="geometry"/>
+          </mxCell>
+        </object>
+        <object id="box-files" label="files" concept="files">
+          <mxCell vertex="1" parent="1" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#d6b656;strokeWidth=2;fontColor=#0f172a;fontSize=20;fontStyle=1;">
+            <mxGeometry x="1380" y="640" width="240" height="90" as="geometry"/>
+          </mxCell>
+        </object>
+        <object id="box-extensions" label="extensions" concept="extensions">
+          <mxCell vertex="1" parent="1" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#86b891;strokeWidth=2;fontColor=#0f172a;fontSize=20;fontStyle=1;">
+            <mxGeometry x="80" y="880" width="240" height="90" as="geometry"/>
           </mxCell>
         </object>
         <object id="edge-transport-application" assoc="transport-&gt;application">
-          <mxCell edge="1" parent="1" source="box-transport" target="box-application" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#475569;">
+          <mxCell edge="1" parent="1" source="box-transport" target="box-application" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#64748b;strokeWidth=1.5;jumpStyle=arc;jumpSize=8;exitX=0.25;exitY=1;entryX=0.75;entryY=0;exitDx=0;exitDy=0;entryDx=0;entryDy=0;">
             <mxGeometry relative="1" as="geometry"></mxGeometry>
           </mxCell>
         </object>
         <object id="edge-transport-logging" assoc="transport-&gt;logging">
-          <mxCell edge="1" parent="1" source="box-transport" target="box-logging" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#475569;exitX=1;exitY=0;entryX=0;entryY=1;">
-            <mxGeometry relative="1" as="geometry"></mxGeometry>
+          <mxCell edge="1" parent="1" source="box-transport" target="box-logging" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#64748b;strokeWidth=1.5;jumpStyle=arc;jumpSize=8;exitX=1;exitY=0.5;entryX=0.5;entryY=0;exitDx=0;exitDy=0;entryDx=0;entryDy=0;">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points"><mxPoint x="1360" y="205"/></Array>
+            </mxGeometry>
           </mxCell>
         </object>
         <object id="edge-transport-runtime" assoc="transport-&gt;runtime">
-          <mxCell edge="1" parent="1" source="box-transport" target="box-runtime" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#475569;exitX=0.5;exitY=1;entryX=0;entryY=0.8;">
+          <mxCell edge="1" parent="1" source="box-transport" target="box-runtime" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#64748b;strokeWidth=1.5;jumpStyle=arc;jumpSize=8;exitX=0.5;exitY=1;entryX=0.5;entryY=0;exitDx=0;exitDy=0;entryDx=0;entryDy=0;">
             <mxGeometry relative="1" as="geometry">
-              <Array as="points"><mxPoint x="180" y="440"/><mxPoint x="750" y="440"/><mxPoint x="750" y="210"/></Array>
+              <Array as="points"><mxPoint x="1080" y="310"/><mxPoint x="360" y="310"/></Array>
             </mxGeometry>
           </mxCell>
         </object>
         <object id="edge-transport-projects" assoc="transport-&gt;projects">
-          <mxCell edge="1" parent="1" source="box-transport" target="box-projects" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#475569;exitX=0.5;exitY=1;entryX=0;entryY=0.8;">
+          <mxCell edge="1" parent="1" source="box-transport" target="box-projects" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#64748b;strokeWidth=1.5;jumpStyle=arc;jumpSize=8;exitX=1;exitY=0.8;entryX=0.75;entryY=0;exitDx=0;exitDy=0;entryDx=0;entryDy=0;">
             <mxGeometry relative="1" as="geometry">
-              <Array as="points"><mxPoint x="180" y="470"/><mxPoint x="740" y="470"/><mxPoint x="740" y="410"/></Array>
+              <Array as="points"><mxPoint x="1200" y="340"/><mxPoint x="1180" y="340"/><mxPoint x="1180" y="560"/><mxPoint x="800" y="560"/></Array>
             </mxGeometry>
           </mxCell>
         </object>
         <object id="edge-application-runtime" assoc="application-&gt;runtime">
-          <mxCell edge="1" parent="1" source="box-application" target="box-runtime" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#475569;exitX=1;exitY=0;entryX=0;entryY=0.8;">
-            <mxGeometry relative="1" as="geometry"></mxGeometry>
+          <mxCell edge="1" parent="1" source="box-application" target="box-runtime" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#64748b;strokeWidth=1.5;jumpStyle=arc;jumpSize=8;exitX=0;exitY=0.5;entryX=0.8;entryY=0;exitDx=0;exitDy=0;entryDx=0;entryDy=0;">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points"><mxPoint x="580" y="445"/><mxPoint x="580" y="580"/><mxPoint x="432" y="580"/></Array>
+            </mxGeometry>
           </mxCell>
         </object>
         <object id="edge-application-projects" assoc="application-&gt;projects">
-          <mxCell edge="1" parent="1" source="box-application" target="box-projects" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#475569;exitX=1;exitY=0.5;entryX=0;entryY=0.3;">
-            <mxGeometry relative="1" as="geometry"></mxGeometry>
+          <mxCell edge="1" parent="1" source="box-application" target="box-projects" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#64748b;strokeWidth=1.5;jumpStyle=arc;jumpSize=8;exitX=0.5;exitY=1;entryX=0.5;entryY=0;exitDx=0;exitDy=0;entryDx=0;entryDy=0;">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points"><mxPoint x="840" y="540"/><mxPoint x="740" y="540"/></Array>
+            </mxGeometry>
           </mxCell>
         </object>
         <object id="edge-application-bootstrap" assoc="application-&gt;bootstrap">
-          <mxCell edge="1" parent="1" source="box-application" target="box-bootstrap" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#475569;exitX=1;exitY=0.8;entryX=0;entryY=0.5;">
-            <mxGeometry relative="1" as="geometry"></mxGeometry>
+          <mxCell edge="1" parent="1" source="box-application" target="box-bootstrap" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#64748b;strokeWidth=1.5;jumpStyle=arc;jumpSize=8;exitX=1;exitY=0.3;entryX=0.5;entryY=0;exitDx=0;exitDy=0;entryDx=0;entryDy=0;">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points"><mxPoint x="1120" y="427"/></Array>
+            </mxGeometry>
           </mxCell>
         </object>
         <object id="edge-application-files" assoc="application-&gt;files">
-          <mxCell edge="1" parent="1" source="box-application" target="box-files" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#475569;exitX=0.5;exitY=1;entryX=0;entryY=0.5;">
+          <mxCell edge="1" parent="1" source="box-application" target="box-files" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#64748b;strokeWidth=1.5;jumpStyle=arc;jumpSize=8;exitX=1;exitY=0.8;entryX=0.5;entryY=0;exitDx=0;exitDy=0;entryDx=0;entryDy=0;">
             <mxGeometry relative="1" as="geometry">
-              <Array as="points"><mxPoint x="540" y="780"/></Array>
+              <Array as="points"><mxPoint x="1500" y="472"/></Array>
             </mxGeometry>
           </mxCell>
         </object>
         <object id="edge-application-extensions" assoc="application-&gt;extensions">
-          <mxCell edge="1" parent="1" source="box-application" target="box-extensions" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#475569;exitX=1;exitY=0;entryX=0.5;entryY=1;">
+          <mxCell edge="1" parent="1" source="box-application" target="box-extensions" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#64748b;strokeWidth=1.5;jumpStyle=arc;jumpSize=8;exitX=0;exitY=0.8;entryX=1;entryY=0.5;exitDx=0;exitDy=0;entryDx=0;entryDy=0;">
             <mxGeometry relative="1" as="geometry">
-              <Array as="points"><mxPoint x="720" y="240"/><mxPoint x="1280" y="240"/></Array>
+              <Array as="points"><mxPoint x="540" y="472"/><mxPoint x="540" y="925"/></Array>
             </mxGeometry>
           </mxCell>
         </object>
         <object id="edge-runtime-extensions" assoc="runtime-&gt;extensions">
-          <mxCell edge="1" parent="1" source="box-runtime" target="box-extensions" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#475569;">
-            <mxGeometry relative="1" as="geometry"></mxGeometry>
+          <mxCell edge="1" parent="1" source="box-runtime" target="box-extensions" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#64748b;strokeWidth=1.5;jumpStyle=arc;jumpSize=8;exitX=0.5;exitY=1;entryX=0.5;entryY=0;exitDx=0;exitDy=0;entryDx=0;entryDy=0;">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points"><mxPoint x="360" y="800"/><mxPoint x="200" y="800"/></Array>
+            </mxGeometry>
           </mxCell>
         </object>
         <object id="edge-testing-runtime" assoc="testing-&gt;runtime">
-          <mxCell edge="1" parent="1" source="box-testing" target="box-runtime" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#475569;exitX=1;exitY=0.5;entryX=0;entryY=0.2;">
+          <mxCell edge="1" parent="1" source="box-testing" target="box-runtime" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#a78bfa;strokeWidth=1.5;jumpStyle=arc;jumpSize=8;exitX=0.5;exitY=1;entryX=0.25;entryY=0;exitDx=0;exitDy=0;entryDx=0;entryDy=0;dashed=1;">
             <mxGeometry relative="1" as="geometry">
-              <Array as="points"><mxPoint x="340" y="120"/><mxPoint x="340" y="180"/></Array>
+              <Array as="points"><mxPoint x="200" y="590"/><mxPoint x="300" y="590"/></Array>
             </mxGeometry>
           </mxCell>
         </object>
         <object id="edge-testing-extensions" assoc="testing-&gt;extensions">
-          <mxCell edge="1" parent="1" source="box-testing" target="box-extensions" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#475569;exitX=0.5;exitY=0;entryX=0.5;entryY=0;">
+          <mxCell edge="1" parent="1" source="box-testing" target="box-extensions" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#a78bfa;strokeWidth=1.5;jumpStyle=arc;jumpSize=8;exitX=0;exitY=0.5;entryX=0;entryY=0.5;exitDx=0;exitDy=0;entryDx=0;entryDy=0;dashed=1;">
             <mxGeometry relative="1" as="geometry">
-              <Array as="points"><mxPoint x="180" y="40"/><mxPoint x="1280" y="40"/></Array>
+              <Array as="points"><mxPoint x="40" y="205"/><mxPoint x="40" y="925"/></Array>
             </mxGeometry>
           </mxCell>
         </object>
-        <mxCell id="legend" value="Pi Server — module dependencies&#xa;Arrow: source imports target (including type-only imports). Colors group responsibilities, not deployment units.&#xa;All boxes are folders under src/. Root entry points, npm dependencies and runtime flows are outside this check.&#xa;See docs/ARCHITECTURE.md for responsibilities, ownership and external boundaries." style="text;html=0;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=16;" vertex="1" parent="1">
-          <mxGeometry x="60" y="880" width="1360" height="100" as="geometry"/>
-        </mxCell>
+        <mxCell id="legend" value="Blue: coordination / transport. Green: runtime / extension integration. Yellow: host resources. Purple dashed arrows: testing helper imports." style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontColor=#334155;fontSize=16;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="80" y="1000" width="1540" height="35" as="geometry"/></mxCell>
+        <mxCell id="scope" value="Scope: top-level src/ folders only. src/index.ts and src/cli.ts compose these modules; external SDK/Pi packages and runtime event flows are not import-graph nodes. See docs/ARCHITECTURE.md." style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontColor=#334155;fontSize=16;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="80" y="1040" width="1540" height="55" as="geometry"/></mxCell>
       </root>
     </mxGraphModel>
   </diagram>
