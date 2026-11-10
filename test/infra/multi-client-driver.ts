@@ -7,11 +7,116 @@ import { FakeRuntimeAdapter } from "./fake-runtime-adapter.js";
 import { v2Socket } from "./v2-socket.js";
 import { ProjectSessionService } from "../../src/projects/project-session-service.js";
 
+type SocketClient = Awaited<ReturnType<typeof v2Socket>>;
+
+export class SessionDriver {
+  constructor(readonly id: string, private readonly runtime: FakeRuntimeAdapter) {}
+
+  shouldContainInput(text: string) {
+    expect(this.runtime.snapshot().messages[0]).toMatchObject({ role: "user", text });
+  }
+
+  askForConfirmation() { return this.runtime.uiContext().confirm("Proceed?", "Still connected"); }
+}
+
+export class ClientDriver {
+  private request = 0;
+  constructor(
+    private readonly client: SocketClient,
+    private readonly app: MultiClientDriver,
+    private readonly initial?: SessionSnapshot[],
+    private readonly serverSocket?: WebSocket,
+  ) {}
+
+  session() {
+    const snapshot = this.initial?.[0];
+    if (!snapshot) throw new Error("Client has not initialized");
+    return this.app.session(snapshot);
+  }
+
+  async createSession() {
+    this.client.send("session.create", "create");
+    const reply = await this.client.response("create");
+    expect(reply).toMatchObject({ ok: true });
+    if (!reply.ok) throw new Error(reply.error.message);
+    return this.app.session((reply.result as { snapshot: SessionSnapshot }).snapshot);
+  }
+
+  async shouldSeeBothSessions() {
+    await this.client.wait(message => message.type === "event" && message.event === "session.list.changed" && message.data.sessions.length === 2);
+  }
+
+  async send(session: SessionDriver, text: string) {
+    this.client.send("message.send", "same-request-id", { message: text }, session.id);
+    expect(await this.client.response("same-request-id")).toMatchObject({ ok: true, result: { state: "accepted" } });
+  }
+
+  async shouldReceiveRuns(...sessions: SessionDriver[]) {
+    for (const session of sessions)
+      await this.client.wait(message => message.type === "event" && message.event === "operation.finished" && message.sessionId === session.id);
+    expect(this.client.messages.filter(message => message.type === "response" && message.requestId === "same-request-id")).toHaveLength(1);
+    const events = this.client.messages.filter(message => message.type === "event" && "sequence" in message);
+    for (const session of sessions) {
+      const sequences = events.filter(message => "sessionId" in message && message.sessionId === session.id).map(message => "sequence" in message ? message.sequence : undefined);
+      expect(sequences).toEqual(sequences.map((_, index) => index + 1));
+    }
+  }
+
+  async changeSettings(session: SessionDriver) {
+    this.client.send("thinking.level", "settings", { level: "off" }, session.id);
+    expect(await this.client.response("settings")).toMatchObject({ ok: true });
+  }
+
+  async shouldReceivePresentation(included: boolean) {
+    expect("presentation" in this.initial![0]!).toBe(included);
+    const event = await this.client.wait(message => message.type === "event" && message.event === "session.snapshot");
+    if (event.type !== "event" || event.event !== "session.snapshot") throw new Error("Expected snapshot");
+    expect("presentation" in event.data).toBe(included);
+  }
+
+  async shouldRejectFileOpen(session: SessionDriver) {
+    this.client.send("file.open", "unsupported", { path: "anything" }, session.id);
+    expect(await this.client.response("unsupported")).toMatchObject({ ok: false, error: { code: "unsupportedOperation" } });
+  }
+
+  async answerConfirmation(session: SessionDriver) {
+    const event = await this.client.wait(message => message.type === "event" && message.event === "prompt.list.changed" && message.data.prompts.length > 0);
+    if (event.type !== "event" || event.event !== "prompt.list.changed") throw new Error("Expected prompt");
+    this.client.send("prompt.answer", "answer", { promptId: event.data.prompts[0]!.id, result: { cancelled: false, value: true } }, session.id);
+    expect(await this.client.response("answer")).toMatchObject({ ok: true });
+  }
+
+  async shouldRemainUsable() {
+    const id = `ping-${++this.request}`;
+    this.client.send("server.ping", id);
+    expect(await this.client.response(id)).toMatchObject({ ok: true });
+  }
+
+  overload() {
+    if (!this.serverSocket) throw new Error("Client has not initialized");
+    Object.defineProperty(this.serverSocket, "bufferedAmount", { get: () => 16_777_216, configurable: true });
+  }
+
+  async shouldDisconnect() {
+    await vi.waitFor(() => expect(this.client.socket.readyState).toBe(WebSocket.CLOSED));
+  }
+
+  async disconnect() {
+    const closed = once(this.client.socket, "close");
+    this.client.socket.close();
+    await closed;
+    await this.app.synchronize();
+  }
+
+  get available() { return this.initial !== undefined && this.client.socket.readyState === WebSocket.OPEN; }
+  terminate() { this.client.socket.terminate(); }
+}
+
 export class MultiClientDriver {
   private server!: PiServer;
   private readonly runtimes = [new FakeRuntimeAdapter("first"), new FakeRuntimeAdapter("second")];
-  private readonly clients: Awaited<ReturnType<typeof v2Socket>>[] = [];
-  private readonly snapshots: SessionSnapshot[][] = [];
+  private readonly clients: ClientDriver[] = [];
+  private readonly serverSockets = new Map<string, WebSocket>();
   private readonly resume = vi.spyOn(this.runtimes[0]!, "resumePrompts");
   private readonly suspend = vi.spyOn(this.runtimes[0]!, "suspendPrompts");
   private readonly releases: (() => void)[] = [];
@@ -19,6 +124,14 @@ export class MultiClientDriver {
   async start() {
     vi.spyOn(ProjectSessionService.prototype, "catalogue").mockResolvedValue({ projects: [] });
     vi.spyOn(ProjectSessionService.prototype, "rememberProject").mockResolvedValue(undefined);
+    const sockets = this.serverSockets;
+    const send = WebSocket.prototype.send;
+    vi.spyOn(WebSocket.prototype, "send").mockImplementation(function (this: WebSocket, ...args: Parameters<typeof send>) {
+      const message = JSON.parse(String(args[0]));
+      if (message.type === "response" && message.requestId === "init" && message.ok)
+        sockets.set(message.result.connectionId, this);
+      return send.apply(this, args);
+    });
     const second = this.runtimes[1]!;
     this.server = createPiServer({ runtime: this.runtimes[0], runtimeFactory: {
       newSession: async () => second, openSession: async () => second, continueProject: async () => second,
@@ -26,144 +139,61 @@ export class MultiClientDriver {
     await new Promise<void>(resolve => this.server.httpServer.listen(0, "127.0.0.1", resolve));
   }
 
+  session(snapshot: SessionSnapshot) {
+    const runtime = this.runtimes.find(runtime => runtime.snapshot().sessionPath === snapshot.sessionPath);
+    if (!runtime) throw new Error("Unknown fixture session");
+    return new SessionDriver(snapshot.sessionId, runtime);
+  }
+
   async connectUninitialized() {
-    this.clients.push(await v2Socket(this.server));
+    const driver = new ClientDriver(await v2Socket(this.server), this);
+    this.clients.push(driver);
+    return driver;
   }
 
   async connect(capabilities: Capability[] = ["presentation"]) {
     const client = await v2Socket(this.server);
-    this.clients.push(client);
+    // Track before initialization so failed setup still releases the socket.
+    const pending = new ClientDriver(client, this);
+    this.clients.push(pending);
     const initial = await client.initialize(capabilities);
-    this.snapshots.push(initial.snapshots);
     expect(client.messages[0]).toMatchObject({ type: "response", requestId: "init", ok: true });
+    const driver = new ClientDriver(client, this, initial.snapshots, this.serverSockets.get(initial.connectionId));
+    this.clients[this.clients.indexOf(pending)] = driver;
+    return driver;
   }
 
-  async openAnotherSession() {
-    const client = this.clients[0]!;
-    client.send("session.create", "create");
-    expect(await client.response("create")).toMatchObject({ ok: true });
-    await Promise.all(this.clients.map(client => client.wait(message => message.type === "event" && message.event === "session.list.changed" && message.data.sessions.length === 2)));
-    for (const [index, connection] of this.clients.entries()) {
-      connection.send("session.list", "list");
-      const reply = await connection.response("list");
-      if (!reply.ok) throw new Error(reply.error.message);
-      const inventory = reply.result as { sessions: { sessionId: string }[] };
-      connection.send("session.snapshot", "second-snapshot", {}, inventory.sessions[1]!.sessionId);
-      const snapshot = await connection.response("second-snapshot");
-      if (!snapshot.ok) throw new Error(snapshot.error.message);
-      this.snapshots[index]!.push(snapshot.result as SessionSnapshot);
-    }
-  }
-
-  async sendSimultaneously() {
-    const gates = this.runtimes.map(runtime => {
+  holdRuns() {
+    for (const runtime of this.runtimes) {
       const original = runtime.prompt.bind(runtime);
       let release!: () => void;
       const gate = new Promise<void>(resolve => { release = resolve; });
       this.releases.push(release);
       vi.spyOn(runtime, "prompt").mockImplementation(async text => { await gate; await original(text); });
-      return release;
-    });
-    for (const [index, client] of this.clients.entries())
-      client.send("message.send", "same-request-id", { message: `client-${index}` }, this.snapshots[index]![index]!.sessionId);
-    for (const client of this.clients)
-      expect(await client.response("same-request-id")).toMatchObject({ ok: true, result: { state: "accepted" } });
-    for (const release of gates) release();
-  }
-
-  async shouldReceiveBothRuns() {
-    for (const [index, client] of this.clients.entries()) {
-      for (const snapshot of this.snapshots[index]!)
-        await client.wait(message => message.type === "event" && message.event === "operation.finished" && message.sessionId === snapshot.sessionId);
-      expect(client.messages.filter(message => message.type === "response" && message.requestId === "same-request-id")).toHaveLength(1);
-      const events = client.messages.filter(message => message.type === "event" && "sequence" in message);
-      for (const snapshot of this.snapshots[index]!) {
-        const sequences = events.filter(message => "sessionId" in message && message.sessionId === snapshot.sessionId).map(message => "sequence" in message ? message.sequence : undefined);
-        expect(sequences).toEqual(sequences.map((_, index) => index + 1));
-      }
-    }
-    expect(this.runtimes[0]!.snapshot().messages[0]).toMatchObject({ text: "client-0" });
-    expect(this.runtimes[1]!.snapshot().messages[0]).toMatchObject({ text: "client-1" });
-  }
-
-  async publishSnapshot(index = 0) {
-    this.clients[index]!.send("thinking.level", "settings", { level: "off" }, this.snapshots[index]![0]!.sessionId);
-    expect(await this.clients[index]!.response("settings")).toMatchObject({ ok: true });
-  }
-
-  async shouldFilterPresentation() {
-    for (const [index, client] of this.clients.entries()) {
-      const snapshot = this.snapshots[index]![0]!;
-      expect("presentation" in snapshot).toBe(index === 0);
-      const event = await client.wait(message => message.type === "event" && message.event === "session.snapshot");
-      if (event.type !== "event" || event.event !== "session.snapshot") throw new Error("Expected snapshot");
-      expect("presentation" in event.data).toBe(index === 0);
-    }
-    this.clients[1]!.send("file.open", "unsupported", { path: "anything" }, this.snapshots[1]![0]!.sessionId);
-    expect(await this.clients[1]!.response("unsupported")).toMatchObject({ ok: false, error: { code: "unsupportedOperation" } });
-  }
-
-  async disconnect(index: number) {
-    const client = this.clients[index]!;
-    const closed = once(client.socket, "close");
-    client.socket.close();
-    await closed;
-    // A surviving peer's response is a server-side event-loop barrier.
-    const peer = this.clients.find(client => client.socket.readyState === WebSocket.OPEN && client.messages.some(message => message.type === "response" && message.requestId === "init" && message.ok));
-    if (peer) {
-      peer.send("server.ping", `disconnect-${index}`);
-      expect(await peer.response(`disconnect-${index}`)).toMatchObject({ ok: true });
     }
   }
 
-  async shouldKeepPromptsAvailable() {
-    expect(this.resume).toHaveBeenCalledOnce();
-    expect(this.suspend).not.toHaveBeenCalled();
-    const pending = this.runtimes[0]!.uiContext().confirm("Proceed?", "Still connected");
-    const client = this.clients[1]!;
-    const event = await client.wait(message => message.type === "event" && message.event === "prompt.list.changed" && message.data.prompts.length > 0);
-    if (event.type !== "event" || event.event !== "prompt.list.changed") throw new Error("Expected prompt");
-    client.send("prompt.answer", "answer", { promptId: event.data.prompts[0]!.id, result: { cancelled: false, value: true } }, this.snapshots[1]![0]!.sessionId);
-    expect(await client.response("answer")).toMatchObject({ ok: true });
-    expect(await pending).toBe(true);
+  releaseRuns() { for (const release of this.releases) release(); }
+
+  async synchronize() {
+    const peer = this.clients.find(client => client.available);
+    if (peer) await peer.shouldRemainUsable();
   }
 
-  shouldNotSuspendPrompts() {
+  shouldKeepDialogsAvailable() {
     expect(this.resume).toHaveBeenCalledOnce();
     expect(this.suspend).not.toHaveBeenCalled();
   }
 
-  async shouldSuspendPrompts() {
+  async shouldStartDialogGrace() {
     await vi.waitFor(() => expect(this.suspend).toHaveBeenCalledOnce());
   }
 
-  shouldResumePrompts() { expect(this.resume).toHaveBeenCalledTimes(2); }
-
-  overloadFirstClient() {
-    const send = WebSocket.prototype.send;
-    let first: WebSocket | undefined;
-    vi.spyOn(WebSocket.prototype, "send").mockImplementation(function (this: WebSocket, ...args: Parameters<typeof send>) {
-      const message = JSON.parse(String(args[0]));
-      if (message.type === "event" && message.event === "settings.changed" && !first) {
-        first = this;
-        Object.defineProperty(this, "bufferedAmount", { get: () => 16_777_216, configurable: true });
-      }
-      return send.apply(this, args);
-    });
-  }
-
-  async shouldKeepSecondClientUsable() {
-    const client = this.clients[1]!;
-    await client.wait(message => message.type === "event" && message.event === "settings.changed");
-    await client.wait(message => message.type === "event" && message.event === "session.snapshot");
-    client.send("server.ping", "survivor");
-    expect(await client.response("survivor")).toMatchObject({ ok: true });
-    await vi.waitFor(() => expect(this.clients[0]!.socket.readyState).toBe(WebSocket.CLOSED));
-  }
+  shouldCancelDialogGrace() { expect(this.resume).toHaveBeenCalledTimes(2); }
 
   async close() {
-    for (const release of this.releases) release();
-    for (const client of this.clients) client.socket.terminate();
+    this.releaseRuns();
+    for (const client of this.clients) client.terminate();
     if (this.server) await this.server.close();
     vi.restoreAllMocks();
   }

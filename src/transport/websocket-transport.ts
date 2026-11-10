@@ -70,8 +70,7 @@ export class WebSocketTransport {
     const connection = new V2Connection({
       serverInstanceId: this.publisher.serverInstanceId, connectionId, capabilities,
       isWritable: () => socket.readyState === WebSocket.OPEN,
-      isActive: () => this.connections.has(socket),
-      activate: () => {
+      onInitialized: () => {
         const first = this.connections.size === 0;
         this.connections.set(socket, { connection, capabilities: selected });
         if (first) this.chat.resumePrompts();
@@ -94,9 +93,10 @@ export class WebSocketTransport {
     socket.on("message", (data, binary) => { if (binary) { socket.close(1003, "Text JSON frames required"); return; } connection.receive(data.toString()); });
     socket.on("error", error => this.logger?.error("websocket.error", { connectionId, message: error.message }));
     socket.on("close", (code, reason) => {
-      this.logger?.info("websocket.close", { connectionId, code, reason: reason.toString("utf8").slice(0, 256), initialized: this.connections.has(socket), runtimeActive: this.chat.openSessionSnapshots().some(snapshot => snapshot.isStreaming) });
+      const initialized = this.connections.delete(socket);
+      this.logger?.info("websocket.close", { connectionId, code, reason: reason.toString("utf8").slice(0, 256), initialized, runtimeActive: this.chat.openSessionSnapshots().some(snapshot => snapshot.isStreaming) });
       connection.dispose();
-      if (this.connections.delete(socket) && this.connections.size === 0) this.chat.suspendPrompts();
+      if (initialized && this.connections.size === 0) this.chat.suspendPrompts();
     });
   }
 }

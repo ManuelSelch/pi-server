@@ -8,18 +8,17 @@ function deferred<T>() { let resolve!: (value: T) => void; const promise = new P
 function setup(overrides: Partial<V2ConnectionHost> = {}, limits: import("../../../../src/transport/v2-connection.js").V2ConnectionLimits = {}) {
   const sent: any[] = [];
   const close = vi.fn();
-  let current = false;
   const host: V2ConnectionHost = {
     serverInstanceId: "server", connectionId: "connection", capabilities: ["presentation"],
-    isWritable: () => true, isActive: () => current,
-    activate: () => { current = true; },
+    isWritable: () => true,
+    onInitialized: vi.fn(),
     send: (message) => { sent.push(message); }, close,
     prepareInitialize: async () => () => initialized,
     execute: vi.fn(async () => ({ kind: "completed" as const, result: { state: "completed" } })),
     outcome: vi.fn(), ...overrides,
   };
   const connection = new V2Connection(host, limits);
-  return { connection, host, sent, close, displace: () => { current = false; } };
+  return { connection, host, sent, close };
 }
 const settle = async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); };
 
@@ -27,25 +26,25 @@ describe("v2 connection admission and correlation", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it("does not activate until preparation succeeds and initialization is queued atomically", async () => {
+  it("does not register until preparation succeeds and initialization is queued atomically", async () => {
     const ready = deferred<() => Result<"server.initialize">>();
     const { connection, host, sent } = setup({ prepareInitialize: () => ready.promise });
-    const activate = vi.spyOn(host, "activate");
+    const register = vi.spyOn(host, "onInitialized");
     connection.receive(request());
-    expect(activate).not.toHaveBeenCalled(); expect(sent).toEqual([]);
+    expect(register).not.toHaveBeenCalled(); expect(sent).toEqual([]);
     ready.resolve(() => initialized); await settle();
-    expect(activate).toHaveBeenCalledOnce();
+    expect(register).toHaveBeenCalledOnce();
     expect(sent).toEqual([{ version: 2, type: "response", requestId: "r1", ok: true, result: initialized }]);
     connection.receive(request("server.ping", "r2")); await settle();
     expect(sent[1]).toMatchObject({ requestId: "r2", ok: true, result: { state: "completed" } });
     connection.dispose(); expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("becomes ready before activation callbacks and queues their events after initialization", async () => {
+  it("becomes ready before registration callbacks and queues their events after initialization", async () => {
     const { connection, host, sent } = setup();
-    const activate = host.activate;
-    host.activate = () => {
-      activate();
+    const register = host.onInitialized;
+    host.onInitialized = () => {
+      register();
       expect(connection.ready).toBe(true);
       host.send({ version: 2, type: "event", event: "server.stopping", serverInstanceId: "server", data: { reason: "restart" } });
     };
@@ -56,13 +55,13 @@ describe("v2 connection admission and correlation", () => {
     connection.dispose();
   });
 
-  it("does not activate when the initial response cannot be sent", async () => {
+  it("does not register when the initial response cannot be sent", async () => {
     const { connection, host, close } = setup({ send: () => { throw new Error("Socket failed"); } });
-    const activate = vi.spyOn(host, "activate");
+    const register = vi.spyOn(host, "onInitialized");
 
     connection.receive(request()); await settle();
 
-    expect(activate).not.toHaveBeenCalled();
+    expect(register).not.toHaveBeenCalled();
     expect(connection.ready).toBe(false);
     expect(close).toHaveBeenCalled();
     connection.dispose();
@@ -110,12 +109,12 @@ describe("v2 connection admission and correlation", () => {
     work.resolve(); await settle(); connection.dispose();
   });
 
-  it("never sends a completed response to an inactive or closed origin and never cancels admitted work", async () => {
+  it("never sends a completed response to a closed origin and never cancels admitted work", async () => {
     const execution = deferred<{ kind: "completed"; result: object }>();
-    const { connection, sent, displace } = setup({ execute: () => execution.promise });
+    const { connection, sent } = setup({ execute: () => execution.promise });
     connection.receive(request()); await settle();
     connection.receive(request("server.ping", "late"));
-    displace(); execution.resolve({ kind: "completed", result: { state: "completed" } }); await settle();
+    connection.dispose(); execution.resolve({ kind: "completed", result: { state: "completed" } }); await settle();
     expect(sent).toHaveLength(1);
     connection.dispose(); expect(vi.getTimerCount()).toBe(0);
   });
@@ -182,9 +181,9 @@ describe("v2 connection admission and correlation", () => {
 
   it("refuses inconsistent initial inventories before activating a client", async () => {
     const { connection, sent, host, close } = setup({ prepareInitialize: async () => () => ({ ...initialized, snapshots: [{ sessionId: "extra" }] } as unknown as Result<"server.initialize">) });
-    const activate = vi.spyOn(host, "activate");
+    const register = vi.spyOn(host, "onInitialized");
     connection.receive(request()); await settle();
-    expect(activate).not.toHaveBeenCalled(); expect(close).toHaveBeenCalled();
+    expect(register).not.toHaveBeenCalled(); expect(close).toHaveBeenCalled();
     expect(sent[0]).toMatchObject({ requestId: "r1", ok: false });
     connection.dispose();
   });

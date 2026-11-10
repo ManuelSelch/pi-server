@@ -16,9 +16,8 @@ export interface V2ConnectionHost {
   connectionId: string;
   capabilities: readonly Capability[];
   isWritable(): boolean;
-  isActive(): boolean;
-  /** Called synchronously after the initial response is queued and readiness is set. */
-  activate(): void;
+  /** Register this connection after its initial response is queued and readiness is set. */
+  onInitialized(): void;
   send(message: ServerMessage): void;
   close(code: number, reason: string): void;
   /** Asynchronous preparation returns a synchronous fresh capture, not a stale snapshot. */
@@ -50,7 +49,7 @@ export class V2Connection {
   }
 
   private get closed(): boolean { return this.phase === "closed"; }
-  get ready(): boolean { return this.phase === "ready" && this.host.isActive() && this.host.isWritable(); }
+  get ready(): boolean { return this.phase === "ready" && this.host.isWritable(); }
   dispose(): void { this.phase = "closed"; clearTimeout(this.timer); }
 
   receive(text: string): void {
@@ -94,16 +93,16 @@ export class V2Connection {
       if (this.phase === "closed" || !this.host.isWritable()) return;
       const result = initializeResultSchema.parse(capture());
       this.checkInitialization(result, selected);
-      // No await from fresh capture through send/activation. Later events follow
+      // No await from fresh capture through send/registration. Later events follow
       // the full barrier; other clients remain independent throughout.
       this.capabilities = selected;
-      this.reply(request.requestId, result, false);
+      this.reply(request.requestId, result);
       if (this.closed) return;
       this.phase = "ready";
       clearTimeout(this.timer);
-      this.host.activate();
+      this.host.onInitialized();
     } catch (error) {
-      this.reject(request.requestId, failure(error), false);
+      this.reject(request.requestId, failure(error));
       this.dispose(); this.close(1011, "Initialization failed");
     }
   }
@@ -149,21 +148,21 @@ export class V2Connection {
     if (request.method === "server.restart") return;
     try { this.host.outcome(request, operationId, outcome, error); } catch { /* State recovery, never a second request response. */ }
   }
-  private reply(requestId: string, result: unknown, requireActive = true): void {
-    this.send({ version: VERSION, type: "response", requestId, ok: true, result: result as JsonValue }, requireActive);
+  private reply(requestId: string, result: unknown): void {
+    this.send({ version: VERSION, type: "response", requestId, ok: true, result: result as JsonValue });
   }
-  private reject(requestId: string, error: ProtocolError, requireActive = true): void {
-    this.send({ version: VERSION, type: "response", requestId, ok: false, error }, this.phase === "ready" && requireActive);
+  private reject(requestId: string, error: ProtocolError): void {
+    this.send({ version: VERSION, type: "response", requestId, ok: false, error });
   }
   private protocolError(code: string, message: string): void {
-    this.send({ version: VERSION, type: "protocolError", serverInstanceId: this.host.serverInstanceId, error: { code, message } }, false);
+    this.send({ version: VERSION, type: "protocolError", serverInstanceId: this.host.serverInstanceId, error: { code, message } });
   }
   private fatal(code: string, message: string): void {
     if (this.phase === "closed") return;
     this.protocolError(code, message); this.dispose(); this.close(1008, code);
   }
-  private send(message: ServerMessage, requireActive: boolean): void {
-    if (this.phase === "closed" || !this.host.isWritable() || (requireActive && !this.host.isActive())) return;
+  private send(message: ServerMessage): void {
+    if (this.closed || !this.host.isWritable()) return;
     try { this.host.send(message); }
     catch { this.dispose(); this.close(1011, "Unable to publish response"); }
   }
