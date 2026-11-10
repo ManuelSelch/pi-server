@@ -28,6 +28,8 @@
     "README.md",
     "LICENSE",
     "THIRD-PARTY-NOTICES.md",
+    "docs/ARCHITECTURE.md",
+    "docs/architecture.drawio",
     "docs/CONFIGURATION.md",
     "docs/EXTENSIONS.md",
     "docs/PROTOCOL.md"

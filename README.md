@@ -62,6 +62,10 @@ Headless by default: `/health` and `/ws`, no session creation or browser launch.
 - `/testing/loopback`: `runLoopbackFixture()`. A plain-Node launcher imports and awaits it, with no arguments. It creates a private canonical workspace, binds ephemeral loopback, rejects other project paths, prints `PI_FIXTURE_READY { directory, endpoint }`, and on SIGTERM explicitly closes retained runtimes and exclusively writes `cleanup.json`. The test driver removes successful artifacts.
 - No exports for concrete transport/application/catalogue/mapping internals. SDK `/protocol` remains authoritative.
 
+## Architecture
+
+See the [architecture guide](docs/ARCHITECTURE.md) and [editable Draw.io module diagram](docs/architecture.drawio), with a pi-verify-compatible dependency check.
+
 ## Source and test ownership
 
 This repository owns the server implementation, internal regression tests, compiled fixture, diagnostics and independent CI. Pi Chat consumes the standalone package and retains its frontend, web/Node application tests and build-before-restart launcher policy, not Swift validation. The independent Swift SDK owns its unit tests and real-transport compatibility suite against its own locked published server dependency. See [test ownership and independent verification](docs/TEST-OWNERSHIP.md) for package boundaries, commands and version-specific results. Generic restart accepts an explicit build callback; failure keeps the old process serving.
