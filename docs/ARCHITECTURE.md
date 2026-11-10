@@ -58,14 +58,15 @@ The diagram is uncompressed, single-page Draw.io XML:
 From the repository root, check the current working tree with:
 
 ```sh
-npx --yes @manuelselch/pi-verify@0.2.7 architecture
+npm run test:arch
 ```
 
+The script runs pinned pi-verify 0.2.7 through npx; its first run requires registry access unless already cached.
 This is a static TypeScript import check, not runtime, security or behavioral verification.
 It excludes root-level source files, external package imports and recognized tests/declarations; nested folders are grouped into their top-level slice.
 The small `testing` source helper slice is included. No runtime code or dependency is added to the server by this configuration.
 
-After structural changes, update the diagram in Draw.io while preserving its metadata, or use the same command with `--write` to refresh dependencies and stage new boxes for human placement.
+After structural changes, update the diagram in Draw.io while preserving its metadata, or use `npm run test:arch -- --write` to refresh dependencies and stage new boxes for human placement.
 Do not use `--accept` as a substitute for human review.
 Commit both diagram and configuration: pi-verify's `review` command and Pi `/verify` compare committed revisions, not local edits.
 A historical revision without this diagram is reported as absent, not as a passing architecture baseline.
